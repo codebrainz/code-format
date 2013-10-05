@@ -5,16 +5,14 @@
 
 G_BEGIN_DECLS
 
-typedef enum
-{
-  FORMAT_STYLE_CUSTOM=0,
+typedef enum {
+  FORMAT_STYLE_CUSTOM = 0,
   FORMAT_STYLE_LLVM,
   FORMAT_STYLE_GOOGLE,
   FORMAT_STYLE_CHROMIUM,
   FORMAT_STYLE_MOZILLA,
   FORMAT_STYLE_WEBKIT,
-}
-FmtStyle;
+} FmtStyle;
 
 size_t fmt_style_get_count(void);
 FmtStyle fmt_style_from_name(const char *name);

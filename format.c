@@ -41,18 +41,18 @@ static void on_process_exited(GPid pid, int status, struct Process *proc)
 }
 
 static struct Process *create_subprocess(const char *work_dir,
-  const char *const *argv)
+                                         const char *const *argv)
 {
   struct Process *proc;
   GError *error = NULL;
-  int fd_in=-1, fd_out=-1;
+  int fd_in = -1, fd_out = -1;
 
   proc = g_new0(struct Process, 1);
 
-  if (!g_spawn_async_with_pipes(work_dir, (char**) argv, NULL,
-      G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL,
-      &proc->child_pid, &fd_in, &fd_out, NULL, &error))
-  {
+  if (!g_spawn_async_with_pipes(work_dir, (char **)argv, NULL,
+                                G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD,
+                                NULL, NULL, &proc->child_pid, &fd_in, &fd_out,
+                                NULL, &error)) {
     g_warning("Failed to create subprocess: %s", error->message);
     g_error_free(error);
     g_free(proc);
@@ -60,8 +60,8 @@ static struct Process *create_subprocess(const char *work_dir,
   }
 
   proc->return_code = -1;
-  proc->exit_handler = g_child_watch_add(proc->child_pid,
-    (GChildWatchFunc) on_process_exited, proc);
+  proc->exit_handler = g_child_watch_add(
+      proc->child_pid, (GChildWatchFunc)on_process_exited, proc);
 
   // TODO: handle windows
   proc->ch_in = g_io_channel_unix_new(fd_in);
@@ -106,8 +106,9 @@ static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length)
   else
     g_ptr_array_add(args, g_strdup("clang-format"));
 
-  g_ptr_array_add(args, g_strdup_printf("-style=%s",
-    fmt_style_get_cmd_name(fmt_prefs_get_style())));
+  g_ptr_array_add(
+      args, g_strdup_printf("-style=%s",
+                            fmt_style_get_cmd_name(fmt_prefs_get_style())));
 
   g_ptr_array_add(args, g_strdup_printf("-cursor=%lu", cursor));
   g_ptr_array_add(args, g_strdup_printf("-offset=%lu", offset));
@@ -117,13 +118,13 @@ static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length)
   return args;
 }
 
-static bool run_process(struct Process *proc, const char *str_in,
-  size_t in_len, GString *str_out)
+static bool run_process(struct Process *proc, const char *str_in, size_t in_len,
+                        GString *str_out)
 {
   GIOStatus status;
   GError *error = NULL;
   bool read_complete = false;
-  size_t in_off=0;
+  size_t in_off = 0;
 
   if (str_in && in_len) {
 
@@ -135,8 +136,8 @@ static bool run_process(struct Process *proc, const char *str_in,
 
       // Write some data to process's stdin
       error = NULL;
-      status = g_io_channel_write_chars(proc->ch_in,
-        str_in + in_off, size_to_write, &bytes_written, &error);
+      status = g_io_channel_write_chars(proc->ch_in, str_in + in_off,
+                                        size_to_write, &bytes_written, &error);
 
       in_off += bytes_written;
 
@@ -147,7 +148,6 @@ static bool run_process(struct Process *proc, const char *str_in,
       }
 
     } while (in_off < in_len);
-
   }
 
   // Flush it and close it down
@@ -157,13 +157,13 @@ static bool run_process(struct Process *proc, const char *str_in,
 
   // All text should be written to process's stdin by now, read the
   // rest of the process's stdout.
-  while (! read_complete) {
-    char *tail_string=NULL;
-    size_t tail_len=0;
+  while (!read_complete) {
+    char *tail_string = NULL;
+    size_t tail_len = 0;
 
     error = NULL;
-    status = g_io_channel_read_to_end(proc->ch_out, &tail_string,
-      &tail_len, &error);
+    status =
+        g_io_channel_read_to_end(proc->ch_out, &tail_string, &tail_len, &error);
 
     if (tail_len > 0)
       g_string_append_len(str_out, tail_string, tail_len);
@@ -172,7 +172,7 @@ static bool run_process(struct Process *proc, const char *str_in,
 
     if (status == G_IO_STATUS_ERROR) {
       g_warning("Failed to read rest of subprocess's stdout: %s",
-        error->message);
+                error->message);
       g_error_free(error);
       return false;
     } else if (status == G_IO_STATUS_AGAIN) {
@@ -185,12 +185,12 @@ static bool run_process(struct Process *proc, const char *str_in,
   return true;
 }
 
-#define INVALID_CURSOR ((size_t)-1)
+#define INVALID_CURSOR ((size_t) - 1)
 
 static size_t extract_cursor(GString *str)
 {
   char *first_nl, *first_line = NULL, *it;
-  char num_buf[64] = {0};
+  char num_buf[64] = { 0 };
   const char *nl_chars;
   size_t first_len, cnt, cursor_pos;
 
@@ -223,10 +223,8 @@ static size_t extract_cursor(GString *str)
   }
   it += 9; // "Cursor":
 
-  for (cnt = 0;
-       cnt < 64 && it && *it && (isspace(*it) || isdigit(*it));
-       cnt++, it++)
-  {
+  for (cnt = 0; cnt < 64 && it && *it && (isspace(*it) || isdigit(*it));
+       cnt++, it++) {
     num_buf[cnt] = *it;
   }
   g_strstrip(num_buf);
@@ -242,7 +240,8 @@ static size_t extract_cursor(GString *str)
 }
 
 GString *fmt_clang_format(const char *file_name, const char *code,
-  size_t code_len, size_t *cursor, size_t offset, size_t length)
+                          size_t code_len, size_t *cursor, size_t offset,
+                          size_t length)
 {
   char *work_dir;
   GPtrArray *args;
@@ -259,7 +258,7 @@ GString *fmt_clang_format(const char *file_name, const char *code,
   args = format_arguments(*cursor, offset, length);
   work_dir = g_path_get_dirname(file_name);
 
-  proc = create_subprocess(work_dir, (const char *const *) args->pdata);
+  proc = create_subprocess(work_dir, (const char * const *)args->pdata);
 
   g_ptr_array_free(args, TRUE);
   g_free(work_dir);
@@ -272,8 +271,8 @@ GString *fmt_clang_format(const char *file_name, const char *code,
     return NULL;
   }
 
-  // FIXME: clang-format returns non-zero when it can't find the
-  // .clang-format file, handle this case specially
+// FIXME: clang-format returns non-zero when it can't find the
+// .clang-format file, handle this case specially
 #if 1
   close_subprocess(proc);
 #else
@@ -310,12 +309,14 @@ GString *fmt_clang_format_default_config(const char *based_on_name)
   else
     g_ptr_array_add(args, g_strdup("clang-format"));
 
-  g_ptr_array_add(args, g_strdup_printf("-style=%s",
-    fmt_style_get_cmd_name(fmt_style_from_name(based_on_name))));
+  g_ptr_array_add(
+      args, g_strdup_printf(
+                "-style=%s",
+                fmt_style_get_cmd_name(fmt_style_from_name(based_on_name))));
   g_ptr_array_add(args, g_strdup("-dump-config"));
   g_ptr_array_add(args, NULL);
 
-  proc = create_subprocess(NULL, (const char *const *) args->pdata);
+  proc = create_subprocess(NULL, (const char * const *)args->pdata);
   g_ptr_array_free(args, true);
 
   if (!proc)
@@ -364,7 +365,7 @@ bool fmt_check_clang_format(const char *path)
   g_ptr_array_add(args, g_strdup("-dump-config"));
   g_ptr_array_add(args, NULL);
 
-  proc = create_subprocess(NULL, (const char *const *) args->pdata);
+  proc = create_subprocess(NULL, (const char * const *)args->pdata);
   g_ptr_array_free(args, true);
 
   if (!proc)
@@ -391,14 +392,13 @@ char *fmt_lookup_clang_format_dot_file(const char *start_at)
 
   // NULL, "." or "" (empty) means use current directory
   if (start_at == NULL || start_at[0] == '\0' ||
-      (start_at[0] == '.' && start_at[1] == '\0'))
-  {
+      (start_at[0] == '.' && start_at[1] == '\0')) {
     char *cur = g_get_current_dir();
     dn = tm_get_real_path(cur);
     g_free(cur);
   }
-  // Otherwise, if it's a file, get the dir name, if not use it
-  else {
+      // Otherwise, if it's a file, get the dir name, if not use it
+      else {
     char *real_start = tm_get_real_path(start_at);
     if (g_file_test(start_at, G_FILE_TEST_IS_DIR))
       dn = real_start;

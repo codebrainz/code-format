@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-# include "config.h"
+#include "config.h"
 #endif
 
 #include "format.h"
@@ -8,7 +8,7 @@
 #include "plugin.h"
 
 #ifndef _
-# define _(s) s
+#define _(s) s
 #endif
 
 GeanyPlugin *geany_plugin;
@@ -17,13 +17,10 @@ GeanyFunctions *geany_functions;
 
 PLUGIN_VERSION_CHECK(211)
 
-PLUGIN_SET_INFO(_("Code Format"),
-                _("Format source code using clang-format."),
-                _("0.1"),
-                _("Matthew Brush <matt@geany.org>"))
+PLUGIN_SET_INFO(_("Code Format"), _("Format source code using clang-format."),
+                _("0.1"), _("Matthew Brush <matt@geany.org>"))
 
-enum
-{
+enum {
   FORMAT_KEY_REGION,
   FORMAT_KEY_DOCUMENT,
 };
@@ -38,8 +35,7 @@ static bool fmt_is_supported_ft(GeanyDocument *doc)
   if (!DOC_VALID(doc))
     return false;
   id = doc->file_type->id;
-  return (id == GEANY_FILETYPES_C ||
-          id == GEANY_FILETYPES_CPP ||
+  return (id == GEANY_FILETYPES_C || id == GEANY_FILETYPES_CPP ||
           id == GEANY_FILETYPES_OBJECTIVEC);
 }
 
@@ -49,8 +45,7 @@ bool on_key_binding(int key_id)
 {
   if (!fmt_is_supported_ft(NULL))
     return true;
-  switch (key_id)
-  {
+  switch (key_id) {
     case FORMAT_KEY_REGION:
       do_format(false);
       break;
@@ -64,31 +59,34 @@ bool on_key_binding(int key_id)
 }
 
 static gboolean on_editor_notify(G_GNUC_UNUSED GObject *obj,
-  G_GNUC_UNUSED GeanyEditor *editor, SCNotification *notif,
-  G_GNUC_UNUSED gpointer user_data)
+                                 G_GNUC_UNUSED GeanyEditor *editor,
+                                 SCNotification *notif,
+                                 G_GNUC_UNUSED gpointer user_data)
 {
-  if (fmt_prefs_get_auto_format() && fmt_is_supported_ft(editor->document)
-      && notif->nmhdr.code == SCN_CHARADDED)
-  {
+  if (fmt_prefs_get_auto_format() && fmt_is_supported_ft(editor->document) &&
+      notif->nmhdr.code == SCN_CHARADDED) {
     if (strchr(fmt_prefs_get_trigger(), notif->ch) != NULL)
-      do_format(true); // FIXME: is it better to use region/line for auto-format?
+      do_format(true); // FIXME: is it better to use region/line for
+                       // auto-format?
   }
   return false;
 }
 
 static void on_plugin_configure_response(G_GNUC_UNUSED GtkDialog *dialog,
-  int response, GtkWidget *panel)
+                                         int response, GtkWidget *panel)
 {
   if (response == GTK_RESPONSE_OK || response == GTK_RESPONSE_ACCEPT)
     fmt_prefs_save_panel(panel, false);
 }
 
-static void on_menu_item_activate(G_GNUC_UNUSED GtkMenuItem *item, gpointer user_data)
+static void on_menu_item_activate(G_GNUC_UNUSED GtkMenuItem *item,
+                                  gpointer user_data)
 {
   on_key_binding(GPOINTER_TO_INT(user_data));
 }
 
-static void on_project_dialog_open(GObject *obj, GtkWidget *notebook, gpointer user_data)
+static void on_project_dialog_open(GObject *obj, GtkWidget *notebook,
+                                   gpointer user_data)
 {
   GtkWidget *pnl;
 
@@ -98,23 +96,27 @@ static void on_project_dialog_open(GObject *obj, GtkWidget *notebook, gpointer u
 
   g_object_set_data(G_OBJECT(notebook), "code-format-panel", pnl);
 
-  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pnl, gtk_label_new(_("Code Format")));
+  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), pnl,
+                           gtk_label_new(_("Code Format")));
 }
 
-static void on_project_dialog_confirmed(G_GNUC_UNUSED GObject *obj, GtkWidget *notebook,
-  G_GNUC_UNUSED gpointer user_data)
+static void on_project_dialog_confirmed(G_GNUC_UNUSED GObject *obj,
+                                        GtkWidget *notebook,
+                                        G_GNUC_UNUSED gpointer user_data)
 {
   GtkWidget *pnl = g_object_get_data(G_OBJECT(notebook), "code-format-panel");
   if (GTK_IS_GRID(pnl))
     fmt_prefs_save_panel(pnl, true);
 }
 
-static void on_project_dialog_close(GObject *obj, GtkWidget *notebook, gpointer user_data)
+static void on_project_dialog_close(GObject *obj, GtkWidget *notebook,
+                                    gpointer user_data)
 {
   GtkWidget *wid = g_object_get_data(G_OBJECT(notebook), "code-format-panel");
   if (GTK_IS_GRID(wid)) {
-    gtk_notebook_remove_page(GTK_NOTEBOOK(notebook),
-      gtk_notebook_page_num(GTK_NOTEBOOK(notebook), wid));
+    gtk_notebook_remove_page(
+        GTK_NOTEBOOK(notebook),
+        gtk_notebook_page_num(GTK_NOTEBOOK(notebook), wid));
   }
 }
 
@@ -156,16 +158,16 @@ static void on_open_config_item_map(GtkWidget *wid, gpointer user_data)
     return;
 
   gtk_widget_set_sensitive(wid,
-    fmt_can_find_clang_format_dot_file(doc->file_name));
+                           fmt_can_find_clang_format_dot_file(doc->file_name));
 }
 
 static void on_tools_item_map(GtkWidget *wid, gpointer user_data)
 {
-  gtk_widget_set_sensitive(wid,
-    fmt_is_supported_ft(NULL));
+  gtk_widget_set_sensitive(wid, fmt_is_supported_ft(NULL));
 }
 
-static void on_auto_format_item_toggled(GtkCheckMenuItem *item, gpointer user_data)
+static void on_auto_format_item_toggled(GtkCheckMenuItem *item,
+                                        gpointer user_data)
 {
   fmt_prefs_set_auto_format(gtk_check_menu_item_get_active(item));
 }
@@ -196,7 +198,7 @@ void plugin_init(G_GNUC_UNUSED GeanyData *data)
 #undef CONNECT
 
   group = plugin_set_key_group(geany_plugin, _("Code Formatting"), 2,
-    (GeanyKeyGroupCallback) on_key_binding);
+                               (GeanyKeyGroupCallback)on_key_binding);
 
   main_menu_item = gtk_menu_item_new_with_label(_("Code Format"));
   ui_add_document_sensitive(main_menu_item);
@@ -206,7 +208,8 @@ void plugin_init(G_GNUC_UNUSED GeanyData *data)
 
   item = gtk_check_menu_item_new_with_label(_("Auto-Formatting"));
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-  g_signal_connect(item, "toggled", G_CALLBACK(on_auto_format_item_toggled), NULL);
+  g_signal_connect(item, "toggled", G_CALLBACK(on_auto_format_item_toggled),
+                   NULL);
   g_signal_connect(item, "map", G_CALLBACK(on_auto_format_item_map), NULL);
 
   item = gtk_separator_menu_item_new();
@@ -214,17 +217,17 @@ void plugin_init(G_GNUC_UNUSED GeanyData *data)
 
   item = gtk_menu_item_new_with_label(_("Current Line or Selection"));
   g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate),
-    GINT_TO_POINTER(FORMAT_KEY_REGION));
+                   GINT_TO_POINTER(FORMAT_KEY_REGION));
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-  keybindings_set_item(group, FORMAT_KEY_REGION, NULL, 0, 0,
-    "format_region", _("Format current line or selection"), item);
+  keybindings_set_item(group, FORMAT_KEY_REGION, NULL, 0, 0, "format_region",
+                       _("Format current line or selection"), item);
 
   item = gtk_menu_item_new_with_label(_("Entire Document"));
   g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate),
-    GINT_TO_POINTER(FORMAT_KEY_DOCUMENT));
+                   GINT_TO_POINTER(FORMAT_KEY_DOCUMENT));
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
   keybindings_set_item(group, FORMAT_KEY_DOCUMENT, NULL, 0, 0,
-    "fmt_clang_format", _("Format entire document"), item);
+                       "fmt_clang_format", _("Format entire document"), item);
 
   item = gtk_separator_menu_item_new();
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
@@ -236,9 +239,8 @@ void plugin_init(G_GNUC_UNUSED GeanyData *data)
 
   gtk_widget_show_all(main_menu_item);
 
-  gtk_menu_shell_append(
-    GTK_MENU_SHELL(geany_data->main_widgets->tools_menu), main_menu_item);
-
+  gtk_menu_shell_append(GTK_MENU_SHELL(geany_data->main_widgets->tools_menu),
+                        main_menu_item);
 }
 
 void plugin_cleanup(void)
@@ -250,7 +252,8 @@ void plugin_cleanup(void)
 GtkWidget *plugin_configure(GtkDialog *dlg)
 {
   GtkWidget *pnl = fmt_prefs_create_panel(false);
-  g_signal_connect(dlg, "response", G_CALLBACK(on_plugin_configure_response), pnl);
+  g_signal_connect(dlg, "response", G_CALLBACK(on_plugin_configure_response),
+                   pnl);
   return pnl;
 }
 
@@ -259,7 +262,7 @@ static void do_format(bool entire_doc)
   GString *formatted;
   GeanyDocument *doc;
   ScintillaObject *sci;
-  size_t offset=0, length=0, sci_len;
+  size_t offset = 0, length = 0, sci_len;
   size_t cursor_pos;
   const char *sci_buf;
 
@@ -292,9 +295,10 @@ static void do_format(bool entire_doc)
 
   cursor_pos = sci_get_current_position(sci);
   sci_len = sci_get_length(sci);
-  sci_buf = (const char *) scintilla_send_message(sci, SCI_GETCHARACTERPOINTER, 0, 0);
+  sci_buf =
+      (const char *)scintilla_send_message(sci, SCI_GETCHARACTERPOINTER, 0, 0);
   formatted = fmt_clang_format(doc->file_name, sci_buf, sci_len, &cursor_pos,
-    offset, length);
+                               offset, length);
 
   // FIXME: handle better
   if (formatted == NULL)
@@ -303,7 +307,8 @@ static void do_format(bool entire_doc)
   // Replace document text and move cursor to new position
   scintilla_send_message(sci, SCI_BEGINUNDOACTION, 0, 0);
   scintilla_send_message(sci, SCI_CLEARALL, 0, 0);
-  scintilla_send_message(sci, SCI_ADDTEXT, formatted->len, (sptr_t) formatted->str);
+  scintilla_send_message(sci, SCI_ADDTEXT, formatted->len,
+                         (sptr_t)formatted->str);
   sci_set_current_position(sci, cursor_pos, !fmt_prefs_get_auto_format());
   scintilla_send_message(sci, SCI_ENDUNDOACTION, 0, 0);
 

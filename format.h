@@ -25,7 +25,8 @@ G_BEGIN_DECLS
  * points to.
  */
 GString *fmt_clang_format(const char *file_name, const char *code,
-  size_t code_len, size_t *cursor, size_t offset, size_t length);
+                          size_t code_len, size_t *cursor, size_t offset,
+                          size_t length);
 
 /**
  * Generates .clang-format contents based on an existing style.
