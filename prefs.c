@@ -26,9 +26,6 @@
 #include "prefs.h"
 #include "format.h"
 
-// Default config text directly included
-#include "defconf.c"
-
 #define PREF_GROUP "code-format"
 #define PREF_PATH "clang-format-path"
 #define PREF_STYLE "style"
@@ -133,6 +130,19 @@ static void load_prefs(struct FmtPreferences *prefs, GKeyFile *kf)
     prefs->on_save = GET_KEY(boolean, "format-on-save");
 }
 
+static void save_default_prefs(const char *fn)
+{
+  char *contents = NULL;
+  size_t length = 0;
+  if (!g_file_test(FMT_SYSTEM_CONFIG, G_FILE_TEST_EXISTS))
+    return;
+  if (g_file_get_contents(FMT_SYSTEM_CONFIG, &contents, &length, NULL))
+  {
+    g_file_set_contents(fn, contents, length, NULL);
+    g_free(contents);
+  }
+}
+
 static void open_user_prefs(void)
 {
   char *fn, *dn;
@@ -146,7 +156,7 @@ static void open_user_prefs(void)
   g_free(dn);
 
   if (!g_file_test(fn, G_FILE_TEST_EXISTS))
-    g_file_set_contents(fn, fmt_def_conf, fmt_def_conf_length, NULL);
+    save_default_prefs(fn);
 
   kf = g_key_file_new();
   g_key_file_load_from_file(
