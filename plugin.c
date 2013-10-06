@@ -305,6 +305,14 @@ GtkWidget *plugin_configure(GtkDialog *dlg)
   return pnl;
 }
 
+void plugin_help(void)
+{
+  // FIXME: if FMT_README_FILE isn't defined or not found on disk, open the
+  // web page version in the browser instead.
+  document_open_file(FMT_README_FILE, true, filetypes[GEANY_FILETYPES_MARKDOWN],
+                     NULL);
+}
+
 static void do_document_replacement(GeanyDocument *doc, Replacement *repl)
 {
   ScintillaObject *sci;
