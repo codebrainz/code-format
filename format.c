@@ -22,105 +22,9 @@
 #include "format.h"
 #include "style.h"
 #include "prefs.h"
-
-#define IO_BUF_SIZE 4096
+#include "process.h"
 
 extern GeanyFunctions *geany_functions;
-
-typedef struct
-{
-  int child_pid;
-  GIOChannel *ch_in, *ch_out;
-  int return_code;
-  unsigned long exit_handler;
-} Process;
-
-static void on_process_exited(GPid pid, int status, Process *proc)
-{
-  g_spawn_close_pid(pid);
-  proc->child_pid = 0;
-
-  // FIXME: is it automatically removed?
-  if (proc->exit_handler > 0)
-  {
-    g_source_remove(proc->exit_handler);
-    proc->exit_handler = 0;
-  }
-
-  if (proc->ch_in)
-  {
-    g_io_channel_shutdown(proc->ch_in, true, NULL);
-    g_io_channel_unref(proc->ch_in);
-    proc->ch_in = NULL;
-  }
-
-  if (proc->ch_out)
-  {
-    g_io_channel_shutdown(proc->ch_out, true, NULL);
-    g_io_channel_unref(proc->ch_out);
-    proc->ch_out = NULL;
-  }
-
-  proc->return_code = status;
-}
-
-static Process *create_subprocess(const char *work_dir, const char *const *argv)
-{
-  Process *proc;
-  GError *error = NULL;
-  int fd_in = -1, fd_out = -1;
-
-  proc = g_new0(Process, 1);
-
-  if (!g_spawn_async_with_pipes(work_dir, (char **)argv, NULL,
-                                G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD,
-                                NULL, NULL, &proc->child_pid, &fd_in, &fd_out,
-                                NULL, &error))
-  {
-    g_warning("Failed to create subprocess: %s", error->message);
-    g_error_free(error);
-    g_free(proc);
-    return NULL;
-  }
-
-  proc->return_code = -1;
-  proc->exit_handler = g_child_watch_add(
-      proc->child_pid, (GChildWatchFunc)on_process_exited, proc);
-
-  // TODO: handle windows
-  proc->ch_in = g_io_channel_unix_new(fd_in);
-  proc->ch_out = g_io_channel_unix_new(fd_out);
-
-  return proc;
-}
-
-static int close_subprocess(Process *proc)
-{
-  int ret_code = proc->return_code;
-
-  if (proc->ch_in)
-  {
-    g_io_channel_shutdown(proc->ch_in, true, NULL);
-    g_io_channel_unref(proc->ch_in);
-  }
-
-  if (proc->ch_out)
-  {
-    g_io_channel_shutdown(proc->ch_out, true, NULL);
-    g_io_channel_unref(proc->ch_out);
-  }
-
-  if (proc->child_pid > 0)
-  {
-    if (proc->exit_handler > 0)
-      g_source_remove(proc->exit_handler);
-    g_spawn_close_pid(proc->child_pid);
-  }
-
-  g_free(proc);
-
-  return ret_code;
-}
 
 static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length,
                                    bool xml_replacements)
@@ -147,82 +51,6 @@ static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length,
   g_ptr_array_add(args, NULL);
 
   return args;
-}
-
-static bool run_process(Process *proc, const char *str_in, size_t in_len,
-                        GString *str_out)
-{
-  GIOStatus status;
-  GError *error = NULL;
-  bool read_complete = false;
-  size_t in_off = 0;
-
-  if (str_in && in_len)
-  {
-
-    do
-    { // until all text is pushed into process's stdin
-
-      size_t bytes_written = 0;
-      size_t write_size_remaining = in_len - in_off;
-      size_t size_to_write = MIN(write_size_remaining, IO_BUF_SIZE);
-
-      // Write some data to process's stdin
-      error = NULL;
-      status = g_io_channel_write_chars(proc->ch_in, str_in + in_off,
-                                        size_to_write, &bytes_written, &error);
-
-      in_off += bytes_written;
-
-      if (status == G_IO_STATUS_ERROR)
-      {
-        g_warning("Failed writing to subprocess's stdin: %s", error->message);
-        g_error_free(error);
-        return false;
-      }
-
-    } while (in_off < in_len);
-  }
-
-  // Flush it and close it down
-  g_io_channel_shutdown(proc->ch_in, true, NULL);
-  g_io_channel_unref(proc->ch_in);
-  proc->ch_in = NULL;
-
-  // All text should be written to process's stdin by now, read the
-  // rest of the process's stdout.
-  while (!read_complete)
-  {
-    char *tail_string = NULL;
-    size_t tail_len = 0;
-
-    error = NULL;
-    status =
-        g_io_channel_read_to_end(proc->ch_out, &tail_string, &tail_len, &error);
-
-    if (tail_len > 0)
-      g_string_append_len(str_out, tail_string, tail_len);
-
-    g_free(tail_string);
-
-    if (status == G_IO_STATUS_ERROR)
-    {
-      g_warning("Failed to read rest of subprocess's stdout: %s",
-                error->message);
-      g_error_free(error);
-      return false;
-    }
-    else if (status == G_IO_STATUS_AGAIN)
-    {
-      continue;
-    }
-    else
-    {
-      read_complete = true;
-    }
-  }
-
-  return true;
 }
 
 #define INVALID_CURSOR ((size_t) - 1)
@@ -291,7 +119,7 @@ GString *fmt_clang_format(const char *file_name, const char *code,
   GPtrArray *args;
   GString *out;
   size_t cursor_pos;
-  Process *proc;
+  FmtProcess *proc;
 
   g_return_val_if_fail(file_name, NULL);
   g_return_val_if_fail(code, NULL);
@@ -302,7 +130,7 @@ GString *fmt_clang_format(const char *file_name, const char *code,
   args = format_arguments(*cursor, offset, length, xml_replacements);
   work_dir = g_path_get_dirname(file_name);
 
-  proc = create_subprocess(work_dir, (const char * const *)args->pdata);
+  proc = fmt_process_open(work_dir, (const char * const *)args->pdata);
 
   g_ptr_array_free(args, TRUE);
   g_free(work_dir);
@@ -311,20 +139,20 @@ GString *fmt_clang_format(const char *file_name, const char *code,
     return NULL;
 
   out = g_string_sized_new(code_len);
-  if (!run_process(proc, code, code_len, out))
+  if (!fmt_process_run(proc, code, code_len, out))
   {
     g_warning("Failed to format document range");
     g_string_free(out, true);
-    close_subprocess(proc);
+    fmt_process_close(proc);
     return NULL;
   }
 
 // FIXME: clang-format returns non-zero when it can't find the
 // .clang-format file, handle this case specially
 #if 1
-  close_subprocess(proc);
+  fmt_process_close(proc);
 #else
-  if (close_subprocess(proc) != 0)
+  if (fmt_process_close(proc) != 0)
   {
     g_warning("Subprocess returned non-zero exit code");
     g_string_free(out, true);
@@ -352,7 +180,7 @@ GString *fmt_clang_format_default_config(const char *based_on_name)
 {
   GString *str;
   GPtrArray *args = g_ptr_array_new_with_free_func(g_free);
-  Process *proc;
+  FmtProcess *proc;
   const char *path;
 
   path = fmt_prefs_get_path();
@@ -369,20 +197,20 @@ GString *fmt_clang_format_default_config(const char *based_on_name)
   g_ptr_array_add(args, g_strdup("-dump-config"));
   g_ptr_array_add(args, NULL);
 
-  proc = create_subprocess(NULL, (const char * const *)args->pdata);
+  proc = fmt_process_open(NULL, (const char * const *)args->pdata);
   g_ptr_array_free(args, true);
 
   if (!proc)
     return NULL;
 
   str = g_string_sized_new(1024);
-  if (!run_process(proc, NULL, 0, str))
+  if (!fmt_process_run(proc, NULL, 0, str))
   {
     g_string_free(str, true);
-    close_subprocess(proc);
+    fmt_process_close(proc);
     return NULL;
   }
-  close_subprocess(proc);
+  fmt_process_close(proc);
 
   return str;
 }
@@ -397,47 +225,6 @@ bool fmt_check_clang_format(const char *path)
 
   g_free(full_path);
   return true;
-
-#ifdef IS_THIS_LIKE_SUPER_DANGEROUS
-  // It would be run each character typed into the path box, which
-  // means if you wanted to enter the name "rmanager" for a ficticious
-  // program, you would first type "rm" and that would be executed. The
-  // only question is whether having specific args to clang-format makes
-  // it safe enough or just all around stupid? I'll leave it disabled
-  // until I'm sure it's safe, for now just stick with a path lookup
-  // and check for executable permissions.
-
-  GString *str;
-  GPtrArray *args;
-  Process *proc;
-  bool result = false;
-
-  args = g_ptr_array_new_with_free_func(g_free);
-  g_ptr_array_add(args, full_path);
-  g_ptr_array_add(args, g_strdup("-style=LLVM"));
-  g_ptr_array_add(args, g_strdup("-dump-config"));
-  g_ptr_array_add(args, NULL);
-
-  proc = create_subprocess(NULL, (const char * const *)args->pdata);
-  g_ptr_array_free(args, true);
-
-  if (!proc)
-    return false;
-
-  str = g_string_sized_new(1024);
-  if (!run_process(proc, NULL, 0, str))
-  {
-    g_string_free(str, true);
-    close_subprocess(proc);
-    return false;
-  }
-  close_subprocess(proc);
-
-  result = (str && str->len > 0);
-  g_string_free(str, true);
-
-  return result;
-#endif
 }
 
 char *fmt_lookup_clang_format_dot_file(const char *start_at)

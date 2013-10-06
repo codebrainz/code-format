@@ -10,6 +10,7 @@ codeformat_la_SOURCES = \
 	format.c format.h \
 	plugin.c plugin.h \
 	prefs.c prefs.h \
+	process.c process.h \
 	replacements.c replacements.h \
 	style.c style.h
 
