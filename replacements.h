@@ -31,14 +31,13 @@ typedef struct
   size_t offset;
   size_t length;
   GString *repl_text;
-} Replacement;
+} FmtRepl;
 
-Replacement *replacement_new(size_t offset, size_t length,
-                             const char *repl_text);
+FmtRepl *fmt_repl_new(size_t offset, size_t length, const char *repl_text);
 
-void replacement_free(Replacement *repl);
+void fmt_repl_free(FmtRepl *repl);
 
-GPtrArray *replacements_parse(GString *xml);
+GPtrArray *fmt_repl_parse(GString *xml);
 
 G_END_DECLS
 

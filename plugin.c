@@ -313,7 +313,7 @@ void plugin_help(void)
                      NULL);
 }
 
-static void do_document_replacement(GeanyDocument *doc, Replacement *repl)
+static void do_document_replacement(GeanyDocument *doc, FmtRepl *repl)
 {
   ScintillaObject *sci;
   g_return_if_fail(doc);
@@ -424,12 +424,12 @@ static void do_format(GeanyDocument *doc, bool entire_doc, bool autof)
                                          offset, length, true);
     if (xml_repl)
     {
-      GPtrArray *repls = replacements_parse(xml_repl);
+      GPtrArray *repls = fmt_repl_parse(xml_repl);
       if (repls)
       {
         for (size_t i = 0; i < repls->len; i++)
         {
-          Replacement *repl = repls->pdata[i];
+          FmtRepl *repl = repls->pdata[i];
           if (repl && repl->repl_text && repl->repl_text->len > 0)
           {
             do_document_replacement(doc, repl);
