@@ -21,7 +21,8 @@ PLUGIN_VERSION_CHECK(211)
 PLUGIN_SET_INFO(_("Code Format"), _("Format source code using clang-format."),
                 _("0.1"), _("Matthew Brush <matt@geany.org>"))
 
-enum {
+enum
+{
   FORMAT_KEY_REGION,
   FORMAT_KEY_DOCUMENT,
   FORMAT_KEY_SESSION,
@@ -41,19 +42,20 @@ static bool fmt_is_supported_ft(GeanyDocument *doc)
           id == GEANY_FILETYPES_OBJECTIVEC);
 }
 
-static void do_format(GeanyDocument *doc, bool entire_doc);
+static void do_format(GeanyDocument *doc, bool entire_doc, bool autof);
 static void do_format_session(void);
 
 bool on_key_binding(int key_id)
 {
   if (!fmt_is_supported_ft(NULL))
     return true;
-  switch (key_id) {
+  switch (key_id)
+  {
     case FORMAT_KEY_REGION:
-      do_format(NULL, false);
+      do_format(NULL, false, false);
       break;
     case FORMAT_KEY_DOCUMENT:
-      do_format(NULL, true);
+      do_format(NULL, true, false);
       break;
     case FORMAT_KEY_SESSION:
       do_format_session();
@@ -70,11 +72,12 @@ static gboolean on_editor_notify(G_GNUC_UNUSED GObject *obj,
                                  G_GNUC_UNUSED gpointer user_data)
 {
   if (fmt_prefs_get_auto_format() && fmt_is_supported_ft(editor->document) &&
-      notif->nmhdr.code == SCN_CHARADDED) {
+      notif->nmhdr.code == SCN_CHARADDED)
+  {
     if (strchr(fmt_prefs_get_trigger(), notif->ch) != NULL)
-      do_format(NULL, true); // FIXME: is it better to use region/line
-                             // for
-                             // auto-format?
+      do_format(NULL, true, true); // FIXME: is it better to use region/line
+                                   // for
+                                   // auto-format?
   }
   return false;
 }
@@ -120,7 +123,8 @@ static void on_project_dialog_close(GObject *obj, GtkWidget *notebook,
                                     gpointer user_data)
 {
   GtkWidget *wid = g_object_get_data(G_OBJECT(notebook), "code-format-panel");
-  if (GTK_IS_GRID(wid)) {
+  if (GTK_IS_GRID(wid))
+  {
     gtk_notebook_remove_page(
         GTK_NOTEBOOK(notebook),
         gtk_notebook_page_num(GTK_NOTEBOOK(notebook), wid));
@@ -151,7 +155,8 @@ static void on_open_config_file(GtkMenuItem *item, gpointer user_data)
     return;
 
   fn = fmt_lookup_clang_format_dot_file(doc->file_name);
-  if (fn) {
+  if (fn)
+  {
     document_open_file(fn, false, filetypes[GEANY_FILETYPES_YAML], NULL);
     g_free(fn);
   }
@@ -188,7 +193,7 @@ static void on_document_before_save(GObject *obj, GeanyDocument *doc,
                                     gpointer user_data)
 {
   if (fmt_prefs_get_format_on_save() && fmt_is_supported_ft(doc))
-    do_format(doc, true);
+    do_format(doc, true, false);
 }
 
 void plugin_init(G_GNUC_UNUSED GeanyData *data)
@@ -291,7 +296,7 @@ static void do_document_replacement(GeanyDocument *doc, Replacement *repl)
   scintilla_send_message(sci, SCI_REPLACESEL, 0, (sptr_t)repl->repl_text->str);
 }
 
-static void do_format(GeanyDocument *doc, bool entire_doc)
+static void do_format(GeanyDocument *doc, bool entire_doc, bool autof)
 {
   GString *formatted;
   ScintillaObject *sci;
@@ -299,32 +304,42 @@ static void do_format(GeanyDocument *doc, bool entire_doc)
   size_t cursor_pos, old_first_line, new_first_line, line_delta;
   const char *sci_buf;
   bool changed = true;
+  bool was_changed;
 
   if (doc == NULL)
     doc = document_get_current();
 
-  if (!DOC_VALID(doc)) {
+  if (!DOC_VALID(doc))
+  {
     g_warning("Cannot format with no documents open");
     return;
   }
   sci = doc->editor->sci;
+  was_changed = doc->changed;
 
   // FIXME: instead of failing, ask user to save the document once
-  if (!doc->real_path) {
+  if (!doc->real_path)
+  {
     g_warning("Cannot format document that's never been saved");
     return;
   }
 
-  if (!entire_doc) {
-    if (sci_has_selection(sci)) { // format selection
+  if (!entire_doc)
+  {
+    if (sci_has_selection(sci))
+    { // format selection
       offset = sci_get_selection_start(sci);
       length = sci_get_selection_end(sci) - offset;
-    } else { // format current line
+    }
+    else
+    { // format current line
       size_t cur_line = sci_get_current_line(sci);
       offset = sci_get_position_from_line(sci, cur_line);
       length = sci_get_line_end_position(sci, cur_line) - offset;
     }
-  } else { // format entire document
+  }
+  else
+  { // format entire document
     offset = 0;
     length = sci_get_length(sci);
   }
@@ -370,7 +385,8 @@ static void do_format(GeanyDocument *doc, bool entire_doc)
   if (formatted == NULL)
     return;
 
-  if (!fmt_prefs_get_auto_format()) {
+  if (!autof)
+  {
     changed = (formatted->len != sci_len) ||
               (g_strcmp0(formatted->str, sci_buf) != 0);
   }
@@ -388,7 +404,7 @@ static void do_format(GeanyDocument *doc, bool entire_doc)
   scintilla_send_message(sci, SCI_LINESCROLL, 0, -line_delta);
   scintilla_send_message(sci, SCI_ENDUNDOACTION, 0, 0);
 
-  document_set_text_changed(doc, (doc->changed || changed));
+  document_set_text_changed(doc, (was_changed || changed));
 
   g_string_free(formatted, true);
 #endif
@@ -396,9 +412,10 @@ static void do_format(GeanyDocument *doc, bool entire_doc)
 
 static void do_format_session(void)
 {
-  for (size_t i = 0; i < documents_array->len; i++) {
+  for (size_t i = 0; i < documents_array->len; i++)
+  {
     GeanyDocument *doc = documents_array->pdata[i];
     if (fmt_is_supported_ft(doc))
-      do_format(doc, true);
+      do_format(doc, true, false);
   }
 }

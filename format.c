@@ -20,18 +20,21 @@ static void on_process_exited(GPid pid, int status, Process *proc)
   proc->child_pid = 0;
 
   // FIXME: is it automatically removed?
-  if (proc->exit_handler > 0) {
+  if (proc->exit_handler > 0)
+  {
     g_source_remove(proc->exit_handler);
     proc->exit_handler = 0;
   }
 
-  if (proc->ch_in) {
+  if (proc->ch_in)
+  {
     g_io_channel_shutdown(proc->ch_in, true, NULL);
     g_io_channel_unref(proc->ch_in);
     proc->ch_in = NULL;
   }
 
-  if (proc->ch_out) {
+  if (proc->ch_out)
+  {
     g_io_channel_shutdown(proc->ch_out, true, NULL);
     g_io_channel_unref(proc->ch_out);
     proc->ch_out = NULL;
@@ -51,7 +54,8 @@ static Process *create_subprocess(const char *work_dir, const char *const *argv)
   if (!g_spawn_async_with_pipes(work_dir, (char **)argv, NULL,
                                 G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD,
                                 NULL, NULL, &proc->child_pid, &fd_in, &fd_out,
-                                NULL, &error)) {
+                                NULL, &error))
+  {
     g_warning("Failed to create subprocess: %s", error->message);
     g_error_free(error);
     g_free(proc);
@@ -73,17 +77,20 @@ static int close_subprocess(Process *proc)
 {
   int ret_code = proc->return_code;
 
-  if (proc->ch_in) {
+  if (proc->ch_in)
+  {
     g_io_channel_shutdown(proc->ch_in, true, NULL);
     g_io_channel_unref(proc->ch_in);
   }
 
-  if (proc->ch_out) {
+  if (proc->ch_out)
+  {
     g_io_channel_shutdown(proc->ch_out, true, NULL);
     g_io_channel_unref(proc->ch_out);
   }
 
-  if (proc->child_pid > 0) {
+  if (proc->child_pid > 0)
+  {
     if (proc->exit_handler > 0)
       g_source_remove(proc->exit_handler);
     g_spawn_close_pid(proc->child_pid);
@@ -129,9 +136,11 @@ static bool run_process(Process *proc, const char *str_in, size_t in_len,
   bool read_complete = false;
   size_t in_off = 0;
 
-  if (str_in && in_len) {
+  if (str_in && in_len)
+  {
 
-    do { // until all text is pushed into process's stdin
+    do
+    { // until all text is pushed into process's stdin
 
       size_t bytes_written = 0;
       size_t write_size_remaining = in_len - in_off;
@@ -144,7 +153,8 @@ static bool run_process(Process *proc, const char *str_in, size_t in_len,
 
       in_off += bytes_written;
 
-      if (status == G_IO_STATUS_ERROR) {
+      if (status == G_IO_STATUS_ERROR)
+      {
         g_warning("Failed writing to subprocess's stdin: %s", error->message);
         g_error_free(error);
         return false;
@@ -160,7 +170,8 @@ static bool run_process(Process *proc, const char *str_in, size_t in_len,
 
   // All text should be written to process's stdin by now, read the
   // rest of the process's stdout.
-  while (!read_complete) {
+  while (!read_complete)
+  {
     char *tail_string = NULL;
     size_t tail_len = 0;
 
@@ -173,14 +184,19 @@ static bool run_process(Process *proc, const char *str_in, size_t in_len,
 
     g_free(tail_string);
 
-    if (status == G_IO_STATUS_ERROR) {
+    if (status == G_IO_STATUS_ERROR)
+    {
       g_warning("Failed to read rest of subprocess's stdout: %s",
                 error->message);
       g_error_free(error);
       return false;
-    } else if (status == G_IO_STATUS_AGAIN) {
+    }
+    else if (status == G_IO_STATUS_AGAIN)
+    {
       continue;
-    } else {
+    }
+    else
+    {
       read_complete = true;
     }
   }
@@ -199,10 +215,12 @@ static size_t extract_cursor(GString *str)
 
   nl_chars = "\r\n";
   first_nl = strstr(str->str, "\r\n");
-  if (!first_nl) {
+  if (!first_nl)
+  {
     nl_chars = "\n";
     first_nl = strchr(str->str, '\n');
-    if (!first_nl) {
+    if (!first_nl)
+    {
       nl_chars = "\r";
       first_nl = strchr(str->str, '\r');
       if (!first_nl)
@@ -220,14 +238,16 @@ static size_t extract_cursor(GString *str)
 
   // Sample: { "Cursor": 4 }
   it = strstr(first_line, "\"Cursor\":");
-  if (!it) {
+  if (!it)
+  {
     g_free(first_line);
     return INVALID_CURSOR;
   }
   it += 9; // "Cursor":
 
   for (cnt = 0; cnt < 64 && it && *it && (isspace(*it) || isdigit(*it));
-       cnt++, it++) {
+       cnt++, it++)
+  {
     num_buf[cnt] = *it;
   }
   g_strstrip(num_buf);
@@ -270,7 +290,8 @@ GString *fmt_clang_format(const char *file_name, const char *code,
     return NULL;
 
   out = g_string_sized_new(code_len);
-  if (!run_process(proc, code, code_len, out)) {
+  if (!run_process(proc, code, code_len, out))
+  {
     g_warning("Failed to format document range");
     g_string_free(out, true);
     close_subprocess(proc);
@@ -282,16 +303,19 @@ GString *fmt_clang_format(const char *file_name, const char *code,
 #if 1
   close_subprocess(proc);
 #else
-  if (close_subprocess(proc) != 0) {
+  if (close_subprocess(proc) != 0)
+  {
     g_warning("Subprocess returned non-zero exit code");
     g_string_free(out, true);
     return NULL;
   }
 #endif
 
-  if (!xml_replacements) {
+  if (!xml_replacements)
+  {
     cursor_pos = extract_cursor(out);
-    if (cursor_pos == INVALID_CURSOR) {
+    if (cursor_pos == INVALID_CURSOR)
+    {
       g_warning(
           "Failed to parse resulting cursor position from resulting code");
       g_string_free(out, true);
@@ -331,7 +355,8 @@ GString *fmt_clang_format_default_config(const char *based_on_name)
     return NULL;
 
   str = g_string_sized_new(1024);
-  if (!run_process(proc, NULL, 0, str)) {
+  if (!run_process(proc, NULL, 0, str))
+  {
     g_string_free(str, true);
     close_subprocess(proc);
     return NULL;
@@ -379,7 +404,8 @@ bool fmt_check_clang_format(const char *path)
     return false;
 
   str = g_string_sized_new(1024);
-  if (!run_process(proc, NULL, 0, str)) {
+  if (!run_process(proc, NULL, 0, str))
+  {
     g_string_free(str, true);
     close_subprocess(proc);
     return false;
@@ -399,23 +425,27 @@ char *fmt_lookup_clang_format_dot_file(const char *start_at)
 
   // NULL, "." or "" (empty) means use current directory
   if (start_at == NULL || start_at[0] == '\0' ||
-      (start_at[0] == '.' && start_at[1] == '\0')) {
+      (start_at[0] == '.' && start_at[1] == '\0'))
+  {
     char *cur = g_get_current_dir();
     dn = tm_get_real_path(cur);
     g_free(cur);
   }
-      // Otherwise, if it's a file, get the dir name, if not use it
-      else {
+  // Otherwise, if it's a file, get the dir name, if not use it
+  else
+  {
     char *real_start = tm_get_real_path(start_at);
     if (g_file_test(start_at, G_FILE_TEST_IS_DIR))
       dn = real_start;
-    else {
+    else
+    {
       dn = g_path_get_dirname(real_start);
       g_free(real_start);
     }
   }
 
-  if (!g_file_test(dn, G_FILE_TEST_EXISTS)) {
+  if (!g_file_test(dn, G_FILE_TEST_EXISTS))
+  {
     g_free(dn);
     return NULL;
   }
@@ -423,17 +453,24 @@ char *fmt_lookup_clang_format_dot_file(const char *start_at)
   // Walk backwards from dn
   fn = NULL;
   last_fn = NULL;
-  while (fn == NULL) {
+  while (fn == NULL)
+  {
     fn = g_build_filename(dn, ".clang-format", NULL);
-    if (fn) {
+    if (fn)
+    {
       // Bail out when top is reached
-      if (last_fn && g_strcmp0(last_fn, fn) == 0) {
+      if (last_fn && g_strcmp0(last_fn, fn) == 0)
+      {
         g_free(fn);
         fn = NULL;
         break;
-      } else if (g_file_test(fn, G_FILE_TEST_EXISTS)) {
+      }
+      else if (g_file_test(fn, G_FILE_TEST_EXISTS))
+      {
         break;
-      } else {
+      }
+      else
+      {
         g_free(last_fn);
         last_fn = fn;
         fn = dn; // use as temp var
@@ -443,7 +480,9 @@ char *fmt_lookup_clang_format_dot_file(const char *start_at)
         if (!g_file_test(dn, G_FILE_TEST_EXISTS))
           break;
       }
-    } else {
+    }
+    else
+    {
       break;
     }
   }
@@ -456,7 +495,8 @@ char *fmt_lookup_clang_format_dot_file(const char *start_at)
 bool fmt_can_find_clang_format_dot_file(const char *start_at)
 {
   char *fn = fmt_lookup_clang_format_dot_file(start_at);
-  if (fn) {
+  if (fn)
+  {
     g_free(fn);
     return true;
   }

@@ -34,12 +34,14 @@ static struct FmtPreferences *cur_prefs = NULL;
 
 static void deinit_prefs(struct FmtPreferences *prefs)
 {
-  if (prefs->path) {
+  if (prefs->path)
+  {
     g_string_free(prefs->path, true);
     prefs->path = NULL;
   }
 
-  if (prefs->trigger) {
+  if (prefs->trigger)
+  {
     g_string_free(prefs->trigger, true);
     prefs->trigger = NULL;
   }
@@ -73,17 +75,21 @@ static void load_prefs(struct FmtPreferences *prefs, GKeyFile *kf)
   if (!g_key_file_has_group(kf, "code-format"))
     return;
 
-  if (HAS_KEY("clang-format-path")) {
+  if (HAS_KEY("clang-format-path"))
+  {
     char *val = GET_KEY(string, "clang-format-path");
-    if (val) {
+    if (val)
+    {
       g_string_assign(prefs->path, val);
       g_free(val);
     }
   }
 
-  if (HAS_KEY("style")) {
+  if (HAS_KEY("style"))
+  {
     char *val = GET_KEY(string, "style");
-    if (val) {
+    if (val)
+    {
       prefs->style = fmt_style_from_name(val);
       g_free(val);
     }
@@ -92,9 +98,11 @@ static void load_prefs(struct FmtPreferences *prefs, GKeyFile *kf)
   if (HAS_KEY("auto-format"))
     prefs->auto_format = GET_KEY(boolean, "auto-format");
 
-  if (HAS_KEY("auto-format-trigger-chars")) {
+  if (HAS_KEY("auto-format-trigger-chars"))
+  {
     char *val = GET_KEY(string, "auto-format-trigger-chars");
-    if (val) {
+    if (val)
+    {
       g_string_assign(prefs->trigger, val);
       g_free(val);
     }
@@ -188,7 +196,8 @@ void fmt_prefs_save_user(void)
   save_prefs(&user_prefs, kf);
 
   contents = g_key_file_to_data(kf, &length, NULL);
-  if (contents) {
+  if (contents)
+  {
     // Store back on disk
     g_file_set_contents(fn, contents, length, NULL);
     g_free(contents);
@@ -296,7 +305,8 @@ static void on_pref_create_clicked(GtkButton *button,
   GtkComboBox *combo = GET_WIDGET(button, UI_STYLE);
   const char *based_on = gtk_combo_box_get_active_id(combo);
   GString *str = fmt_clang_format_default_config(based_on);
-  if (str) {
+  if (str)
+  {
     GeanyDocument *doc = document_new_file(
         ".clang-format", filetypes[GEANY_FILETYPES_YAML], str->str);
     document_set_text_changed(doc, true);
@@ -309,9 +319,12 @@ static void on_pref_create_clicked(GtkButton *button,
 static void validate_clang_path_entry(GtkEntry *ent)
 {
   const char *path = gtk_entry_get_text(ent);
-  if (fmt_check_clang_format(path)) {
+  if (fmt_check_clang_format(path))
+  {
     gtk_entry_set_icon_from_stock(ent, GTK_ENTRY_ICON_SECONDARY, GTK_STOCK_OK);
-  } else {
+  }
+  else
+  {
     gtk_entry_set_icon_from_stock(ent, GTK_ENTRY_ICON_SECONDARY,
                                   GTK_STOCK_DIALOG_ERROR);
   }
@@ -349,7 +362,8 @@ void fmt_prefs_save_panel(GtkWidget *panel, bool project)
 
   if (p == &user_prefs)
     fmt_prefs_save_user();
-  else {
+  else
+  {
     GKeyFile *kf = g_key_file_new();
     char *contents;
     size_t length = 0;
@@ -360,7 +374,8 @@ void fmt_prefs_save_panel(GtkWidget *panel, bool project)
     // Update with new contents
     fmt_prefs_save_project(kf);
     contents = g_key_file_to_data(kf, &length, NULL);
-    if (contents) {
+    if (contents)
+    {
       // Store updated to disk
       g_file_set_contents(geany_data->app->project->file_name, contents, length,
                           NULL);
@@ -430,7 +445,8 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   SET_WIDGET(grid, UI_STYLE, combo);
 
   // Add the style presets to the combo
-  for (size_t i = 0; i < fmt_style_get_count(); i++) {
+  for (size_t i = 0; i < fmt_style_get_count(); i++)
+  {
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo),
                               fmt_style_get_name((FmtStyle)i),
                               fmt_style_get_label((FmtStyle)i));

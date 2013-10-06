@@ -64,16 +64,21 @@ static void on_start_element(GMarkupParseContext *context,
     return;
 
   nattrs = g_strv_length((char **)attribute_names);
-  for (i = 0; i < nattrs; i++) {
-    if (g_strcmp0(attribute_names[i], "offset") == 0) {
+  for (i = 0; i < nattrs; i++)
+  {
+    if (g_strcmp0(attribute_names[i], "offset") == 0)
+    {
       errno = 0;
       offset = strtol(attribute_values[i], NULL, 10);
       if (errno != 0)
         offset = -1;
-    } else if (g_strcmp0(attribute_names[i], "length") == 0) {
+    }
+    else if (g_strcmp0(attribute_names[i], "length") == 0)
+    {
       errno = 0;
       len = strtol(attribute_values[i], NULL, 10);
-      if (errno != 0) {
+      if (errno != 0)
+      {
         len = -1;
       }
     }
@@ -99,7 +104,8 @@ static void on_end_element(GMarkupParseContext *context,
     return;
   repl = g_queue_pop_head(ctx->stack);
   ctx->in_repl = false;
-  if (repl) {
+  if (repl)
+  {
     if (repl->repl_text->len == 0) // replacement text must be at least 1
       replacement_free(repl);
     else
@@ -130,10 +136,13 @@ GPtrArray *replacements_parse(GString *xml)
       &parser_funcs, 0, ctx, (GDestroyNotify)parse_context_free);
   GError *error = NULL;
 
-  if (g_markup_parse_context_parse(pcontext, xml->str, xml->len, &error)) {
+  if (g_markup_parse_context_parse(pcontext, xml->str, xml->len, &error))
+  {
     res = ctx->nodes;
     ctx->nodes = NULL;
-  } else {
+  }
+  else
+  {
     g_warning("Failed to parse XML replacements: %s", error->message);
     g_error_free(error);
   }

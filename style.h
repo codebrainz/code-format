@@ -5,7 +5,8 @@
 
 G_BEGIN_DECLS
 
-typedef enum {
+typedef enum
+{
   FORMAT_STYLE_CUSTOM = 0,
   FORMAT_STYLE_LLVM,
   FORMAT_STYLE_GOOGLE,
