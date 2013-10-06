@@ -24,7 +24,15 @@
 
 #include <glib.h>
 #include <gtk/gtk.h>
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-attributes"
+#endif
 #include <geanyplugin.h>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #include <ctype.h>
 #include <errno.h>
