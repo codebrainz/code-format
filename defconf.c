@@ -32,10 +32,10 @@ static const char fmt_def_conf[] =
     "# path information is present, PATH will be searched by default.\n"
     "clang-format-path = clang-format\n"
     "\n"
-    "# This option decides whether the code format plugin is enabled\n"
-    "# or disabled. It only applies in project configuration files,\n"
-    "# not in the regular user configuration file.\n"
-    "enabled=false\n"
+    "# This option causes the active document to be re-formatted just\n"
+    "# before it is saved to disk. This option is especially useful\n"
+    "# when auto-formatting is not enabled.\n"
+    "format-on-save=false\n"
     "\n";
 
 static const size_t fmt_def_conf_length =

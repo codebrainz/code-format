@@ -19,6 +19,9 @@ G_BEGIN_DECLS
  * upon return.
  * @param offset The start of the range to format.
  * @param length The length of the range to format.
+ * @param xml_replacements When true, XML text is returned describing
+ * the replacements that should take place to format the document.
+ * When false, the formatted text will be returned.
  * @return A new GString containing the re-formated text or @c NULL on
  * error. The document's text should be replaced with this and then the
  * caret/cursor position should be updated from the value @a cursor
@@ -26,7 +29,7 @@ G_BEGIN_DECLS
  */
 GString *fmt_clang_format(const char *file_name, const char *code,
                           size_t code_len, size_t *cursor, size_t offset,
-                          size_t length);
+                          size_t length, bool xml_replacements);
 
 /**
  * Generates .clang-format contents based on an existing style.

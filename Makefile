@@ -9,10 +9,10 @@ fmt_LDFLAGS := $(strip $(LDFLAGS) $(shell pkg-config --libs geany))
 
 all: format.so
 
-format.so: plugin.o format.o style.o prefs.o
+format.so: plugin.o format.o style.o prefs.o replacements.o
 	$(CC) -shared $(fmt_CFLAGS) -o $@ $^ $(fmt_LDFLAGS)
 
-testprefs.o: testprefs.c
+replacements.o: replacements.c
 	$(CC) -c -fPIC $(fmt_CFLAGS) -o $@ $<
 
 plugin.o: plugin.c

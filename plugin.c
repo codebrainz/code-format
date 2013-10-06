@@ -5,6 +5,7 @@
 #include "format.h"
 #include "prefs.h"
 #include "style.h"
+#include "replacements.h"
 #include "plugin.h"
 
 #ifndef _
@@ -23,6 +24,7 @@ PLUGIN_SET_INFO(_("Code Format"), _("Format source code using clang-format."),
 enum {
   FORMAT_KEY_REGION,
   FORMAT_KEY_DOCUMENT,
+  FORMAT_KEY_SESSION,
 };
 
 static GtkWidget *main_menu_item = NULL;
@@ -39,7 +41,8 @@ static bool fmt_is_supported_ft(GeanyDocument *doc)
           id == GEANY_FILETYPES_OBJECTIVEC);
 }
 
-static void do_format(bool entire_doc);
+static void do_format(GeanyDocument *doc, bool entire_doc);
+static void do_format_session(void);
 
 bool on_key_binding(int key_id)
 {
@@ -47,10 +50,13 @@ bool on_key_binding(int key_id)
     return true;
   switch (key_id) {
     case FORMAT_KEY_REGION:
-      do_format(false);
+      do_format(NULL, false);
       break;
     case FORMAT_KEY_DOCUMENT:
-      do_format(true);
+      do_format(NULL, true);
+      break;
+    case FORMAT_KEY_SESSION:
+      do_format_session();
       break;
     default:
       return false;
@@ -66,8 +72,9 @@ static gboolean on_editor_notify(G_GNUC_UNUSED GObject *obj,
   if (fmt_prefs_get_auto_format() && fmt_is_supported_ft(editor->document) &&
       notif->nmhdr.code == SCN_CHARADDED) {
     if (strchr(fmt_prefs_get_trigger(), notif->ch) != NULL)
-      do_format(true); // FIXME: is it better to use region/line for
-                       // auto-format?
+      do_format(NULL, true); // FIXME: is it better to use region/line
+                             // for
+                             // auto-format?
   }
   return false;
 }
@@ -177,6 +184,13 @@ static void on_auto_format_item_map(GtkCheckMenuItem *item, gpointer user_data)
   gtk_check_menu_item_set_active(item, fmt_prefs_get_auto_format());
 }
 
+static void on_document_before_save(GObject *obj, GeanyDocument *doc,
+                                    gpointer user_data)
+{
+  if (fmt_prefs_get_format_on_save() && fmt_is_supported_ft(doc))
+    do_format(doc, true);
+}
+
 void plugin_init(G_GNUC_UNUSED GeanyData *data)
 {
   GeanyKeyGroup *group;
@@ -194,10 +208,11 @@ void plugin_init(G_GNUC_UNUSED GeanyData *data)
   CONNECT("project-open", on_project_open);
   CONNECT("project-close", on_project_close);
   CONNECT("project-save", on_project_save);
+  CONNECT("document-before-save", on_document_before_save);
 
 #undef CONNECT
 
-  group = plugin_set_key_group(geany_plugin, _("Code Formatting"), 2,
+  group = plugin_set_key_group(geany_plugin, _("Code Formatting"), 3,
                                (GeanyKeyGroupCallback)on_key_binding);
 
   main_menu_item = gtk_menu_item_new_with_label(_("Code Format"));
@@ -227,7 +242,14 @@ void plugin_init(G_GNUC_UNUSED GeanyData *data)
                    GINT_TO_POINTER(FORMAT_KEY_DOCUMENT));
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
   keybindings_set_item(group, FORMAT_KEY_DOCUMENT, NULL, 0, 0,
-                       "fmt_clang_format", _("Format entire document"), item);
+                       "format_document", _("Format entire document"), item);
+
+  item = gtk_menu_item_new_with_label(_("Entire Session"));
+  g_signal_connect(item, "activate", G_CALLBACK(on_menu_item_activate),
+                   GINT_TO_POINTER(FORMAT_KEY_SESSION));
+  gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+  keybindings_set_item(group, FORMAT_KEY_SESSION, NULL, 0, 0, "format_session",
+                       _("Format entire session"), item);
 
   item = gtk_separator_menu_item_new();
   gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
@@ -257,16 +279,18 @@ GtkWidget *plugin_configure(GtkDialog *dlg)
   return pnl;
 }
 
-static void do_format(bool entire_doc)
+static void do_format(GeanyDocument *doc, bool entire_doc)
 {
   GString *formatted;
-  GeanyDocument *doc;
   ScintillaObject *sci;
   size_t offset = 0, length = 0, sci_len;
-  size_t cursor_pos;
+  size_t cursor_pos, old_first_line, new_first_line, line_delta;
   const char *sci_buf;
+  bool changed = true;
 
-  doc = document_get_current();
+  if (doc == NULL)
+    doc = document_get_current();
+
   if (!DOC_VALID(doc)) {
     g_warning("Cannot format with no documents open");
     return;
@@ -297,20 +321,64 @@ static void do_format(bool entire_doc)
   sci_len = sci_get_length(sci);
   sci_buf =
       (const char *)scintilla_send_message(sci, SCI_GETCHARACTERPOINTER, 0, 0);
+
+  { // Debug
+    size_t cp = cursor_pos;
+    GString *xml_repl = fmt_clang_format(doc->file_name, sci_buf, sci_len, &cp,
+                                         offset, length, false);
+    if (xml_repl) {
+      GPtrArray *repls = replacements_parse(xml_repl);
+      if (repls) {
+        for (size_t i = 0; i < repls->len; i++) {
+          Replacement *repl = repls->pdata[i];
+          g_debug("Replacement: offset=%lu, length=%lu, text='%s'",
+                  repl->offset, repl->length, repl->repl_text->str);
+        }
+        g_ptr_array_free(repls, true);
+      }
+      g_string_free(xml_repl, true);
+    }
+  }
+
   formatted = fmt_clang_format(doc->file_name, sci_buf, sci_len, &cursor_pos,
-                               offset, length);
+                               offset, length, false);
 
   // FIXME: handle better
   if (formatted == NULL)
     return;
+
+  changed =
+      (formatted->len != sci_len) || (g_strcmp0(formatted->str, sci_buf) != 0);
+
+  old_first_line = scintilla_send_message(sci, SCI_GETFIRSTVISIBLELINE, 0, 0);
 
   // Replace document text and move cursor to new position
   scintilla_send_message(sci, SCI_BEGINUNDOACTION, 0, 0);
   scintilla_send_message(sci, SCI_CLEARALL, 0, 0);
   scintilla_send_message(sci, SCI_ADDTEXT, formatted->len,
                          (sptr_t)formatted->str);
-  sci_set_current_position(sci, cursor_pos, !fmt_prefs_get_auto_format());
+
+  scintilla_send_message(sci, SCI_GOTOPOS, cursor_pos, 0);
+
+  new_first_line = scintilla_send_message(sci, SCI_GETFIRSTVISIBLELINE, 0, 0);
+  line_delta = new_first_line - old_first_line;
+
+  scintilla_send_message(sci, SCI_LINESCROLL, 0, -line_delta);
+
   scintilla_send_message(sci, SCI_ENDUNDOACTION, 0, 0);
 
+  // FIXME: only when not triggered by auto-formatting or saving
+  document_set_text_changed(doc, changed);
+
   g_string_free(formatted, true);
+}
+
+static void do_format_session(void)
+{
+  guint i;
+  foreach_document(i)
+  {
+    if (fmt_is_supported_ft(documents[i]))
+      do_format(documents[i], true);
+  }
 }

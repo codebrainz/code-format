@@ -22,6 +22,8 @@ bool fmt_prefs_get_auto_format(void);
 void fmt_prefs_set_auto_format(bool auto_format);
 const char *fmt_prefs_get_trigger(void);
 void fmt_prefs_set_trigger(const char *trigger_chars);
+bool fmt_prefs_get_format_on_save(void);
+void fmt_prefs_set_format_on_save(bool on_save);
 
 void fmt_prefs_save_panel(GtkWidget *panel, bool project);
 GtkWidget *fmt_prefs_create_panel(bool project);

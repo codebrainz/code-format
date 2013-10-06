@@ -6,15 +6,15 @@
 
 extern GeanyFunctions *geany_functions;
 
-struct Process
+typedef struct
 {
   int child_pid;
   GIOChannel *ch_in, *ch_out;
   int return_code;
   unsigned long exit_handler;
-};
+} Process;
 
-static void on_process_exited(GPid pid, int status, struct Process *proc)
+static void on_process_exited(GPid pid, int status, Process *proc)
 {
   g_spawn_close_pid(pid);
   proc->child_pid = 0;
@@ -40,14 +40,13 @@ static void on_process_exited(GPid pid, int status, struct Process *proc)
   proc->return_code = status;
 }
 
-static struct Process *create_subprocess(const char *work_dir,
-                                         const char *const *argv)
+static Process *create_subprocess(const char *work_dir, const char *const *argv)
 {
-  struct Process *proc;
+  Process *proc;
   GError *error = NULL;
   int fd_in = -1, fd_out = -1;
 
-  proc = g_new0(struct Process, 1);
+  proc = g_new0(Process, 1);
 
   if (!g_spawn_async_with_pipes(work_dir, (char **)argv, NULL,
                                 G_SPAWN_SEARCH_PATH | G_SPAWN_DO_NOT_REAP_CHILD,
@@ -70,7 +69,7 @@ static struct Process *create_subprocess(const char *work_dir,
   return proc;
 }
 
-static int close_subprocess(struct Process *proc)
+static int close_subprocess(Process *proc)
 {
   int ret_code = proc->return_code;
 
@@ -95,7 +94,8 @@ static int close_subprocess(struct Process *proc)
   return ret_code;
 }
 
-static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length)
+static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length,
+                                   bool xml)
 {
   GPtrArray *args = g_ptr_array_new_full(5, g_free);
   const char *path;
@@ -113,12 +113,14 @@ static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length)
   g_ptr_array_add(args, g_strdup_printf("-cursor=%lu", cursor));
   g_ptr_array_add(args, g_strdup_printf("-offset=%lu", offset));
   g_ptr_array_add(args, g_strdup_printf("-length=%lu", length));
+  if (xml)
+    g_ptr_array_add(args, g_strdup("-output-replacements-xml"));
   g_ptr_array_add(args, NULL);
 
   return args;
 }
 
-static bool run_process(struct Process *proc, const char *str_in, size_t in_len,
+static bool run_process(Process *proc, const char *str_in, size_t in_len,
                         GString *str_out)
 {
   GIOStatus status;
@@ -241,13 +243,13 @@ static size_t extract_cursor(GString *str)
 
 GString *fmt_clang_format(const char *file_name, const char *code,
                           size_t code_len, size_t *cursor, size_t offset,
-                          size_t length)
+                          size_t length, bool xml_replacements)
 {
   char *work_dir;
   GPtrArray *args;
   GString *out;
   size_t cursor_pos;
-  struct Process *proc;
+  Process *proc;
 
   g_return_val_if_fail(file_name, NULL);
   g_return_val_if_fail(code, NULL);
@@ -255,13 +257,16 @@ GString *fmt_clang_format(const char *file_name, const char *code,
   g_return_val_if_fail(cursor, NULL);
   g_return_val_if_fail(length, NULL);
 
-  args = format_arguments(*cursor, offset, length);
+  args = format_arguments(*cursor, offset, length, xml_replacements);
   work_dir = g_path_get_dirname(file_name);
 
   proc = create_subprocess(work_dir, (const char * const *)args->pdata);
 
   g_ptr_array_free(args, TRUE);
   g_free(work_dir);
+
+  if (!proc) // In case clang-format cannot be found
+    return NULL;
 
   out = g_string_sized_new(code_len);
   if (!run_process(proc, code, code_len, out)) {
@@ -283,14 +288,16 @@ GString *fmt_clang_format(const char *file_name, const char *code,
   }
 #endif
 
-  cursor_pos = extract_cursor(out);
-  if (cursor_pos == INVALID_CURSOR) {
-    g_warning("Failed to parse resulting cursor position from resulting code");
-    g_string_free(out, true);
-    return NULL;
+  if (!xml_replacements) {
+    cursor_pos = extract_cursor(out);
+    if (cursor_pos == INVALID_CURSOR) {
+      g_warning(
+          "Failed to parse resulting cursor position from resulting code");
+      g_string_free(out, true);
+      return NULL;
+    }
+    *cursor = cursor_pos;
   }
-
-  *cursor = cursor_pos;
 
   return out;
 }
@@ -299,7 +306,7 @@ GString *fmt_clang_format_default_config(const char *based_on_name)
 {
   GString *str;
   GPtrArray *args = g_ptr_array_new_with_free_func(g_free);
-  struct Process *proc;
+  Process *proc;
   const char *path;
 
   path = fmt_prefs_get_path();
@@ -333,7 +340,6 @@ GString *fmt_clang_format_default_config(const char *based_on_name)
   return str;
 }
 
-// FIXME
 bool fmt_check_clang_format(const char *path)
 {
   char *full_path;
@@ -356,7 +362,7 @@ bool fmt_check_clang_format(const char *path)
 
   GString *str;
   GPtrArray *args;
-  struct Process *proc;
+  Process *proc;
   bool result = false;
 
   args = g_ptr_array_new_with_free_func(g_free);

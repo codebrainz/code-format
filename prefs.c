@@ -13,6 +13,7 @@
 #define PREF_STYLE "style"
 #define PREF_AUTO "auto-format"
 #define PREF_TRIGGER "auto-format-trigger-chars"
+#define PREF_ONSAVE "format-on-save"
 
 #define HAS_KEY(key) g_key_file_has_key(kf, PREF_GROUP, key, NULL)
 #define GET_KEY(T, key) g_key_file_get_##T(kf, PREF_GROUP, key, NULL)
@@ -24,6 +25,7 @@ struct FmtPreferences
   FmtStyle style;
   bool auto_format;
   GString *trigger;
+  bool on_save;
 };
 
 static struct FmtPreferences user_prefs;
@@ -50,7 +52,10 @@ static void init_prefs(struct FmtPreferences *prefs)
   deinit_prefs(prefs);
 
   prefs->path = g_string_new("clang-format");
+  prefs->style = FORMAT_STYLE_CUSTOM;
+  prefs->auto_format = false;
   prefs->trigger = g_string_new(")}];");
+  prefs->on_save = false;
 }
 
 static void clone_prefs(struct FmtPreferences *psrc,
@@ -60,6 +65,7 @@ static void clone_prefs(struct FmtPreferences *psrc,
   pdst->auto_format = psrc->auto_format;
   g_string_assign(pdst->path, psrc->path->str);
   g_string_assign(pdst->trigger, psrc->trigger->str);
+  pdst->on_save = psrc->on_save;
 }
 
 static void load_prefs(struct FmtPreferences *prefs, GKeyFile *kf)
@@ -93,6 +99,9 @@ static void load_prefs(struct FmtPreferences *prefs, GKeyFile *kf)
       g_free(val);
     }
   }
+
+  if (HAS_KEY("format-on-save"))
+    prefs->on_save = GET_KEY(boolean, "format-on-save");
 }
 
 static void open_user_prefs(void)
@@ -126,6 +135,7 @@ static void save_prefs(struct FmtPreferences *prefs, GKeyFile *kf)
   SET_KEY(string, "style", fmt_style_get_name(prefs->style));
   SET_KEY(boolean, "auto-format", prefs->auto_format);
   SET_KEY(string, "auto-format-trigger-chars", prefs->trigger->str);
+  SET_KEY(boolean, "format-on-save", prefs->on_save);
 }
 
 void fmt_prefs_init(void)
@@ -228,6 +238,16 @@ void fmt_prefs_set_trigger(const char *trigger_chars)
   g_string_assign(cur_prefs->trigger, trigger_chars);
 }
 
+bool fmt_prefs_get_format_on_save(void)
+{
+  return cur_prefs->on_save;
+}
+
+void fmt_prefs_set_format_on_save(bool on_save)
+{
+  cur_prefs->on_save = on_save;
+}
+
 //======================================================================
 //
 // UI Stuff
@@ -237,6 +257,7 @@ void fmt_prefs_set_trigger(const char *trigger_chars)
 #define UI_STYLE PREF_GROUP "-" PREF_STYLE
 #define UI_AUTO PREF_GROUP "-" PREF_AUTO
 #define UI_TRIGGER PREF_GROUP "-" PREF_TRIGGER
+#define UI_ON_SAVE PREF_GROUP "-" PREF_ONSAVE
 #define UI_TRIG_LBL UI_TRIGGER "-label"
 #define UI_TRIG_ENT UI_TRIGGER "-entry"
 #define UI_CREATE UI_STYLE "-create-button"
@@ -305,7 +326,7 @@ static void on_pref_clang_format_path_changed(GtkEntry *ent,
 
 void fmt_prefs_save_panel(GtkWidget *panel, bool project)
 {
-  GtkWidget *w_path, *w_style, *w_auto, *w_trigger;
+  GtkWidget *w_path, *w_style, *w_auto, *w_trigger, *w_onsave;
   struct FmtPreferences *p = NULL;
 
   if (project && geany_data->app->project)
@@ -317,12 +338,14 @@ void fmt_prefs_save_panel(GtkWidget *panel, bool project)
   w_style = GET_WIDGET(panel, UI_STYLE);
   w_auto = GET_WIDGET(panel, UI_AUTO);
   w_trigger = GET_WIDGET(panel, UI_TRIGGER);
+  w_onsave = GET_WIDGET(panel, UI_ON_SAVE);
 
   g_string_assign(p->path, gtk_entry_get_text(GTK_ENTRY(w_path)));
   p->style =
       fmt_style_from_name(gtk_combo_box_get_active_id(GTK_COMBO_BOX(w_style)));
   p->auto_format = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w_auto));
   g_string_assign(p->trigger, gtk_entry_get_text(GTK_ENTRY(w_trigger)));
+  p->on_save = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w_onsave));
 
   if (p == &user_prefs)
     fmt_prefs_save_user();
@@ -430,6 +453,18 @@ GtkWidget *fmt_prefs_create_panel(bool project)
              "preset style listed in the list. Save the file in the source "
              "code directory containing the files you want auto-formatting "
              "to affect."));
+
+  row++;
+
+  chk = gtk_check_button_new_with_label(_("Format documents when saving."));
+  gtk_grid_attach(GTK_GRID(grid), chk, 0, row, 3, 1);
+  gtk_widget_set_hexpand(chk, true);
+  gtk_widget_set_tooltip_text(
+      chk, _("Enabling this option causes "
+             "the document to be formatted just before it is saved. This is "
+             "especially useful if you aren't using auto-formatting."));
+  SET_WIDGET(grid, UI_ON_SAVE, chk);
+  gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk), p->on_save);
 
   row++;
 
