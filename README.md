@@ -9,7 +9,8 @@ Features
 --------
 
 * Accurate lexical code formatting using Clang frontend.
-* Fast pipe-based IO with `clang-format` utility.
+* Runs `clang-format` as an external process so you can swap out and
+upgrade versions at will without touching the plugin.
 * Auto-formatting; never worry about formatting again, let the plugin
 do all the work!
 * Can format current line, current selection, current document, or
@@ -84,6 +85,15 @@ your specific code formatting style.
 In the configuration file, this setting is known as `style` and can
 be (at present) one of `llvm`, `google`, `chromium`, `mozilla` or
 `custom`.
+
+#### Format on Save
+
+This setting controls whether the active document will be formatted just
+before Geany saves it. This is especially useful if you don't like to
+enable the auto-formatting option but still want mostly-automatic
+formatting of the code.
+
+In the configuration file, this setting is known as `format-on-save`.
 
 #### Auto-Format
 
