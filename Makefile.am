@@ -16,7 +16,6 @@ codeformat_la_SOURCES = \
 	plugin.c plugin.h \
 	prefs.c prefs.h \
 	process.c process.h \
-	replacements.c replacements.h \
 	style.c style.h
 
 EXTRA_DIST = defconf.c

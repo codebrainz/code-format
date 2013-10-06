@@ -21,11 +21,6 @@
 	},
 	{
 		"directory": "@abs_top_srcdir@",
-		"command": "@CC@ @CFLAGS@ @GEANY_CFLAGS@ -c -o replacements.o replacements.c",
-		"file": "replacements.c"
-	},
-	{
-		"directory": "@abs_top_srcdir@",
 		"command": "@CC@ @CFLAGS@ @GEANY_CFLAGS@ -c -o style.o style.c",
 		"file": "style.c"
 	}

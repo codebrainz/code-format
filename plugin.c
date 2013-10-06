@@ -26,7 +26,6 @@
 #include "format.h"
 #include "prefs.h"
 #include "style.h"
-#include "replacements.h"
 #include "plugin.h"
 
 #ifndef _
@@ -313,18 +312,6 @@ void plugin_help(void)
                      NULL);
 }
 
-static void do_document_replacement(GeanyDocument *doc, FmtRepl *repl)
-{
-  ScintillaObject *sci;
-  g_return_if_fail(doc);
-  g_return_if_fail(repl && repl->repl_text);
-  sci = doc->editor->sci;
-  scintilla_send_message(sci, SCI_SETANCHOR, repl->offset, 0);
-  scintilla_send_message(sci, SCI_SETCURRENTPOS, repl->offset + repl->length,
-                         0);
-  scintilla_send_message(sci, SCI_REPLACESEL, 0, (sptr_t)repl->repl_text->str);
-}
-
 static void do_format(GeanyDocument *doc, bool entire_doc, bool autof)
 {
   GString *formatted;
@@ -378,9 +365,6 @@ static void do_format(GeanyDocument *doc, bool entire_doc, bool autof)
   sci_buf =
       (const char *)scintilla_send_message(sci, SCI_GETCHARACTERPOINTER, 0, 0);
 
-// Functional code to do replacements using whole code from stdout,
-// so it can be disabled while testing using XML replacements
-#if 1
   formatted = fmt_clang_format(doc->file_name, sci_buf, sci_len, &cursor_pos,
                                offset, length, false);
 
@@ -410,37 +394,6 @@ static void do_format(GeanyDocument *doc, bool entire_doc, bool autof)
   document_set_text_changed(doc, (was_changed || changed));
 
   g_string_free(formatted, true);
-
-#else
-  // Experimental code using XML replacements
-  // Notes: Seems not to give a way to keep cursor in correct place, unless
-  // it's
-  // implied in the replacements. Need to figure out how to actually apply the
-  // replacements vis a vis offsets in future replacements after previous
-  // replacements have been made.
-  {
-    size_t cp = cursor_pos;
-    GString *xml_repl = fmt_clang_format(doc->file_name, sci_buf, sci_len, &cp,
-                                         offset, length, true);
-    if (xml_repl)
-    {
-      GPtrArray *repls = fmt_repl_parse(xml_repl);
-      if (repls)
-      {
-        for (size_t i = 0; i < repls->len; i++)
-        {
-          FmtRepl *repl = repls->pdata[i];
-          if (repl && repl->repl_text && repl->repl_text->len > 0)
-          {
-            do_document_replacement(doc, repl);
-          }
-        }
-        g_ptr_array_free(repls, true);
-      }
-      g_string_free(xml_repl, true);
-    }
-  }
-#endif
 }
 
 static void do_format_session(void)
