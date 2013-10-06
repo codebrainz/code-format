@@ -25,7 +25,7 @@ static const char fmt_def_conf[] =
     "\n"
     "# Characters that when typed will trigger an automatic re-formatting\n"
     "# when the 'auto-format' option is enabled.\n"
-    "auto-format-trigger-chars = })]\\;\n"
+    "auto-format-trigger-chars = })];\n"
     "\n"
     "# Specific path to clang-format utility. If it's not in the PATH\n"
     "# environment variable, you can point this directly to the "
