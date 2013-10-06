@@ -279,6 +279,18 @@ GtkWidget *plugin_configure(GtkDialog *dlg)
   return pnl;
 }
 
+static void do_document_replacement(GeanyDocument *doc, Replacement *repl)
+{
+  ScintillaObject *sci;
+  g_return_if_fail(doc);
+  g_return_if_fail(repl && repl->repl_text);
+  sci = doc->editor->sci;
+  scintilla_send_message(sci, SCI_SETANCHOR, repl->offset, 0);
+  scintilla_send_message(sci, SCI_SETCURRENTPOS, repl->offset + repl->length,
+                         0);
+  scintilla_send_message(sci, SCI_REPLACESEL, 0, (sptr_t)repl->repl_text->str);
+}
+
 static void do_format(GeanyDocument *doc, bool entire_doc)
 {
   GString *formatted;
@@ -322,24 +334,35 @@ static void do_format(GeanyDocument *doc, bool entire_doc)
   sci_buf =
       (const char *)scintilla_send_message(sci, SCI_GETCHARACTERPOINTER, 0, 0);
 
-  { // Debug
+// Experimental code using XML replacements
+// Notes: Seems not to give a way to keep cursor in correct place, unless it's
+// implied in the replacements. Need to figure out how to actually apply the
+// replacements vis a vis offsets in future replacements after previous
+// replacements have been made.
+#if 0
+{
     size_t cp = cursor_pos;
     GString *xml_repl = fmt_clang_format(doc->file_name, sci_buf, sci_len, &cp,
-                                         offset, length, false);
+                                         offset, length, true);
     if (xml_repl) {
       GPtrArray *repls = replacements_parse(xml_repl);
       if (repls) {
         for (size_t i = 0; i < repls->len; i++) {
           Replacement *repl = repls->pdata[i];
-          g_debug("Replacement: offset=%lu, length=%lu, text='%s'",
-                  repl->offset, repl->length, repl->repl_text->str);
+          if (repl && repl->repl_text && repl->repl_text->len > 0) {
+            do_document_replacement(doc, repl);
+          }
         }
         g_ptr_array_free(repls, true);
       }
       g_string_free(xml_repl, true);
     }
-  }
+}
+#endif
 
+// Functional code to do replacements using whole code from stdout,
+// disabled while testing using XML replacements
+#if 1
   formatted = fmt_clang_format(doc->file_name, sci_buf, sci_len, &cursor_pos,
                                offset, length, false);
 
@@ -347,8 +370,10 @@ static void do_format(GeanyDocument *doc, bool entire_doc)
   if (formatted == NULL)
     return;
 
-  changed =
-      (formatted->len != sci_len) || (g_strcmp0(formatted->str, sci_buf) != 0);
+  if (!fmt_prefs_get_auto_format()) {
+    changed = (formatted->len != sci_len) ||
+              (g_strcmp0(formatted->str, sci_buf) != 0);
+  }
 
   old_first_line = scintilla_send_message(sci, SCI_GETFIRSTVISIBLELINE, 0, 0);
 
@@ -357,28 +382,23 @@ static void do_format(GeanyDocument *doc, bool entire_doc)
   scintilla_send_message(sci, SCI_CLEARALL, 0, 0);
   scintilla_send_message(sci, SCI_ADDTEXT, formatted->len,
                          (sptr_t)formatted->str);
-
   scintilla_send_message(sci, SCI_GOTOPOS, cursor_pos, 0);
-
   new_first_line = scintilla_send_message(sci, SCI_GETFIRSTVISIBLELINE, 0, 0);
   line_delta = new_first_line - old_first_line;
-
   scintilla_send_message(sci, SCI_LINESCROLL, 0, -line_delta);
-
   scintilla_send_message(sci, SCI_ENDUNDOACTION, 0, 0);
 
-  // FIXME: only when not triggered by auto-formatting or saving
-  document_set_text_changed(doc, changed);
+  document_set_text_changed(doc, (doc->changed || changed));
 
   g_string_free(formatted, true);
+#endif
 }
 
 static void do_format_session(void)
 {
-  guint i;
-  foreach_document(i)
-  {
-    if (fmt_is_supported_ft(documents[i]))
-      do_format(documents[i], true);
+  for (size_t i = 0; i < documents_array->len; i++) {
+    GeanyDocument *doc = documents_array->pdata[i];
+    if (fmt_is_supported_ft(doc))
+      do_format(doc, true);
   }
 }

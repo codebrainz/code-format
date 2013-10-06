@@ -95,7 +95,7 @@ static int close_subprocess(Process *proc)
 }
 
 static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length,
-                                   bool xml)
+                                   bool xml_replacements)
 {
   GPtrArray *args = g_ptr_array_new_full(5, g_free);
   const char *path;
@@ -106,6 +106,9 @@ static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length,
   else
     g_ptr_array_add(args, g_strdup("clang-format"));
 
+  if (xml_replacements)
+    g_ptr_array_add(args, g_strdup("-output-replacements-xml"));
+
   g_ptr_array_add(
       args, g_strdup_printf("-style=%s",
                             fmt_style_get_cmd_name(fmt_prefs_get_style())));
@@ -113,8 +116,6 @@ static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length,
   g_ptr_array_add(args, g_strdup_printf("-cursor=%lu", cursor));
   g_ptr_array_add(args, g_strdup_printf("-offset=%lu", offset));
   g_ptr_array_add(args, g_strdup_printf("-length=%lu", length));
-  if (xml)
-    g_ptr_array_add(args, g_strdup("-output-replacements-xml"));
   g_ptr_array_add(args, NULL);
 
   return args;
