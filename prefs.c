@@ -313,7 +313,7 @@ static void on_pref_auto_format_toggled(GtkToggleButton *btn,
 static void on_pref_style_changed(GtkComboBox *cb,
                                   G_GNUC_UNUSED gpointer user_data)
 {
-  FmtStyle style = fmt_style_from_name(gtk_combo_box_get_active_id(cb));
+  FmtStyle style = (FmtStyle)gtk_combo_box_get_active(cb);
   GtkWidget *btn = GET_WIDGET(cb, UI_CREATE);
   gtk_widget_set_sensitive(btn, !(style == FORMAT_STYLE_CUSTOM));
 }
@@ -324,7 +324,8 @@ static void on_pref_create_clicked(GtkButton *button,
                                    G_GNUC_UNUSED gpointer user_data)
 {
   GtkComboBox *combo = GET_WIDGET(button, UI_STYLE);
-  const char *based_on = gtk_combo_box_get_active_id(combo);
+  FmtStyle style = (FmtStyle)gtk_combo_box_get_active(combo);
+  const char *based_on = fmt_style_get_name(style);
   GString *str = fmt_clang_format_default_config(based_on);
   if (str)
   {
@@ -332,7 +333,7 @@ static void on_pref_create_clicked(GtkButton *button,
         ".clang-format", filetypes[GEANY_FILETYPES_YAML], str->str);
     document_set_text_changed(doc, true);
     g_string_free(str, true);
-    gtk_combo_box_set_active_id(combo, fmt_style_get_name(FORMAT_STYLE_CUSTOM));
+    gtk_combo_box_set_active(combo, (int)FORMAT_STYLE_CUSTOM);
   }
 }
 
@@ -375,8 +376,7 @@ void fmt_prefs_save_panel(GtkWidget *panel, bool project)
   w_onsave = GET_WIDGET(panel, UI_ON_SAVE);
 
   g_string_assign(p->path, gtk_entry_get_text(GTK_ENTRY(w_path)));
-  p->style =
-      fmt_style_from_name(gtk_combo_box_get_active_id(GTK_COMBO_BOX(w_style)));
+  p->style = (FmtStyle)gtk_combo_box_get_active(GTK_COMBO_BOX(w_style));
   p->auto_format = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w_auto));
   g_string_assign(p->trigger, gtk_entry_get_text(GTK_ENTRY(w_trigger)));
   p->on_save = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w_onsave));
@@ -417,15 +417,26 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   if (!p)
     p = &user_prefs;
 
+#if GTK_CHECK_VERSION(3, 0, 0)
   grid = gtk_grid_new();
-  gtk_container_set_border_width(GTK_CONTAINER(grid), 12);
   gtk_grid_set_column_spacing(GTK_GRID(grid), 6);
   gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
+#else
+  grid = gtk_table_new(7, 3, false);
+  gtk_table_set_col_spacings(GTK_TABLE(grid), 5);
+  gtk_table_set_row_spacings(GTK_TABLE(grid), 5);
+#endif
+  gtk_container_set_border_width(GTK_CONTAINER(grid), 12);
 
   lbl = gtk_label_new(_("ClangFormat Path:"));
   gtk_misc_set_alignment(GTK_MISC(lbl), 0.0, 0.5);
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), lbl, 0, row, 1, 1);
   gtk_widget_set_hexpand(lbl, false);
+#else
+  gtk_table_attach(GTK_TABLE(grid), lbl, 0, 1, row, row + 1, GTK_FILL, GTK_FILL,
+                   0, 0);
+#endif
 
   ent = gtk_entry_new();
   box = ui_path_box_new(_("Choose Path to 'clang-format'"),
@@ -436,8 +447,13 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   validate_clang_path_entry(GTK_ENTRY(ent));
   g_signal_connect(ent, "changed",
                    G_CALLBACK(on_pref_clang_format_path_changed), NULL);
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), box, 1, row, 2, 1);
   gtk_widget_set_hexpand(box, true);
+#else
+  gtk_table_attach(GTK_TABLE(grid), box, 1, 3, row, row + 1,
+                   GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
+#endif
   gtk_widget_set_tooltip_text(
       ent, _("Specify the path to the "
              "'clang-format' binary/executable on your system. If it's "
@@ -453,12 +469,22 @@ GtkWidget *fmt_prefs_create_panel(bool project)
 
   lbl = gtk_label_new(_("Style:"));
   gtk_misc_set_alignment(GTK_MISC(lbl), 0.0, 0.5);
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), lbl, 0, row, 1, 1);
   gtk_widget_set_hexpand(lbl, false);
+#else
+  gtk_table_attach(GTK_TABLE(grid), lbl, 0, 1, row, row + 1, GTK_FILL, GTK_FILL,
+                   0, 0);
+#endif
 
   combo = gtk_combo_box_text_new();
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), combo, 1, row, 1, 1);
   gtk_widget_set_hexpand(combo, true);
+#else
+  gtk_table_attach(GTK_TABLE(grid), combo, 1, 2, row, row + 1,
+                   GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
+#endif
   gtk_widget_set_tooltip_text(
       combo, _("Select a preset code style "
                "from the list, or make your own using 'Custom'. See the "
@@ -468,13 +494,17 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   // Add the style presets to the combo
   for (size_t i = 0; i < fmt_style_get_count(); i++)
   {
+#if GTK_CHECK_VERSION(3, 0, 0)
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo),
                               fmt_style_get_name((FmtStyle)i),
                               fmt_style_get_label((FmtStyle)i));
+#else
+    gtk_combo_box_append_text(GTK_COMBO_BOX(combo),
+                              fmt_style_get_label((FmtStyle)i));
+#endif
   }
 
-  gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo),
-                              fmt_style_get_name(p->style));
+  gtk_combo_box_set_active(GTK_COMBO_BOX(combo), (int)p->style);
 
   btn = gtk_button_new_with_label(_("Create"));
   SET_WIDGET(btn, UI_STYLE, combo);
@@ -482,8 +512,13 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   gtk_widget_set_sensitive(btn, false);
   SET_WIDGET(combo, UI_CREATE, btn);
   g_signal_connect(combo, "changed", G_CALLBACK(on_pref_style_changed), NULL);
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), btn, 2, row, 1, 1);
   gtk_widget_set_hexpand(btn, false);
+#else
+  gtk_table_attach(GTK_TABLE(grid), btn, 2, 3, row, row + 1, GTK_FILL, GTK_FILL,
+                   0, 0);
+#endif
   gtk_widget_set_tooltip_text(
       btn, _("If you press this button, "
              "it will open up a new '.clang-format' file based on the "
@@ -494,8 +529,13 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   row++;
 
   chk = gtk_check_button_new_with_label(_("Format documents when saving."));
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), chk, 0, row, 3, 1);
   gtk_widget_set_hexpand(chk, true);
+#else
+  gtk_table_attach(GTK_TABLE(grid), chk, 0, 3, row, row + 1,
+                   GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
+#endif
   gtk_widget_set_tooltip_text(
       chk, _("Enabling this option causes "
              "the document to be formatted just before it is saved. This is "
@@ -506,8 +546,13 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   row++;
 
   chk = gtk_check_button_new_with_label(_("Enable auto-formatting"));
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), chk, 0, row, 3, 1);
   gtk_widget_set_hexpand(chk, true);
+#else
+  gtk_table_attach(GTK_TABLE(grid), chk, 0, 3, row, row + 1,
+                   GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
+#endif
   g_signal_connect(chk, "toggled", G_CALLBACK(on_pref_auto_format_toggled),
                    NULL);
   gtk_widget_set_tooltip_text(
@@ -525,15 +570,25 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   gtk_widget_set_sensitive(lbl, p->auto_format);
   SET_WIDGET(chk, UI_TRIG_LBL, lbl);
   gtk_misc_set_alignment(GTK_MISC(lbl), 0.0, 0.5);
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), lbl, 0, row, 1, 1);
   gtk_widget_set_hexpand(lbl, false);
+#else
+  gtk_table_attach(GTK_TABLE(grid), lbl, 0, 1, row, row + 1, GTK_FILL, GTK_FILL,
+                   0, 0);
+#endif
 
   ent = gtk_entry_new();
   gtk_entry_set_text(GTK_ENTRY(ent), p->trigger->str);
   gtk_widget_set_sensitive(ent, p->auto_format);
   SET_WIDGET(chk, UI_TRIG_ENT, ent);
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), ent, 1, row, 2, 1);
   gtk_widget_set_hexpand(ent, true);
+#else
+  gtk_table_attach(GTK_TABLE(grid), ent, 1, 3, row, row + 1,
+                   GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
+#endif
   gtk_widget_set_tooltip_text(
       ent, _("When auto-formatting is "
              "enabled, these characters are used to trigger the "
@@ -544,15 +599,26 @@ GtkWidget *fmt_prefs_create_panel(bool project)
 
   row++;
 
+#if GTK_CHECK_VERSION(3, 0, 0)
   sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
   gtk_grid_attach(GTK_GRID(grid), sep, 0, row, 3, 1);
+#else
+  sep = gtk_hseparator_new();
+  gtk_table_attach(GTK_TABLE(grid), sep, 0, 3, row, row + 1,
+                   GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
+#endif
 
   row++;
 
   lbl = gtk_link_button_new_with_label(
       "http://clang.llvm.org/docs/ClangFormat.html",
       _("Click here for more information about ClangFormat"));
+#if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), lbl, 0, row, 3, 1);
+#else
+  gtk_table_attach(GTK_TABLE(grid), lbl, 0, 3, row, row + 1,
+                   GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
+#endif
 
   return grid;
 }

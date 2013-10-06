@@ -135,7 +135,7 @@ static void on_project_dialog_confirmed(G_GNUC_UNUSED GObject *obj,
                                         G_GNUC_UNUSED gpointer user_data)
 {
   GtkWidget *pnl = g_object_get_data(G_OBJECT(notebook), "code-format-panel");
-  if (GTK_IS_GRID(pnl))
+  if (GTK_IS_CONTAINER(pnl))
     fmt_prefs_save_panel(pnl, true);
 }
 
@@ -143,7 +143,7 @@ static void on_project_dialog_close(GObject *obj, GtkWidget *notebook,
                                     gpointer user_data)
 {
   GtkWidget *wid = g_object_get_data(G_OBJECT(notebook), "code-format-panel");
-  if (GTK_IS_GRID(wid))
+  if (GTK_IS_CONTAINER(wid))
   {
     gtk_notebook_remove_page(
         GTK_NOTEBOOK(notebook),

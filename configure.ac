@@ -7,6 +7,6 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AM_SILENT_RULES([yes])
 LT_INIT([disable-static pic-only])
 AC_PROG_CC_C99
-AX_CHECK_GEANY_GTK3
+PKG_CHECK_MODULES([GEANY], [geany >= 1.23])
 AC_CONFIG_FILES([Makefile compile_commands.json])
 AC_OUTPUT
