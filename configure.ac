@@ -8,5 +8,5 @@ AM_SILENT_RULES([yes])
 LT_INIT([disable-static pic-only])
 AC_PROG_CC_C99
 AX_CHECK_GEANY_GTK3
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile compile_commands.json])
 AC_OUTPUT

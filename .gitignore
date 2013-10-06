@@ -20,4 +20,6 @@ Makefile
 /m4/lt*.m4
 /stamp-h1
 
+/compile_commands.json
+
 /misc/
