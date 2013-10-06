@@ -29,7 +29,7 @@
 
 struct FmtProcess
 {
-  int child_pid;
+  GPid child_pid;
   GIOChannel *ch_in, *ch_out;
   int return_code;
   unsigned long exit_handler;

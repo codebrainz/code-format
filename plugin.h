@@ -25,6 +25,9 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
+#include <Scintilla.h>
+#include <ScintillaWidget.h>
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wignored-attributes"

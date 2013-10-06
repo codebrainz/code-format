@@ -33,7 +33,7 @@ extern GeanyFunctions *geany_functions;
 static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length,
                                    bool xml_replacements)
 {
-  GPtrArray *args = g_ptr_array_new_full(5, g_free);
+  GPtrArray *args = g_ptr_array_new_with_free_func(g_free);
   const char *path;
 
   path = fmt_prefs_get_path();

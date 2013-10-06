@@ -398,10 +398,18 @@ static void do_format(GeanyDocument *doc, bool entire_doc, bool autof)
 
 static void do_format_session(void)
 {
+#ifndef G_OS_WIN32
   for (size_t i = 0; i < documents_array->len; i++)
   {
     GeanyDocument *doc = documents_array->pdata[i];
+#else // On Windows/Mingw the linker says undefined ref.
+      // to documents_array, so you use the goofy macro loop thing.
+  guint i;
+  foreach_document(i)
+  {
+    GeanyDocument *doc = documents[i];
+#endif
     if (fmt_is_supported_ft(doc))
-      do_format(doc, true, false);
+        do_format(doc, true, false);
   }
 }
