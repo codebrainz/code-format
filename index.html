@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <title>Geany Code Format Plugin by codebrainz</title>
+  </head>
+
+  <body>
+    <div id="container">
+      <div class="inner">
+
+        <header>
+          <h1>Geany Code Format Plugin</h1>
+          <h2>A code formatting plugin for Geany using ClangFormat.</h2>
+        </header>
+
+        <section id="downloads" class="clearfix">
+          <a href="https://github.com/codebrainz/code-format/zipball/master" id="download-zip" class="button"><span>Download .zip</span></a>
+          <a href="https://github.com/codebrainz/code-format/tarball/master" id="download-tar-gz" class="button"><span>Download .tar.gz</span></a>
+          <a href="https://github.com/codebrainz/code-format" id="view-on-github" class="button"><span>View on GitHub</span></a>
+        </section>
+
+        <hr>
+
+        <section id="main_content">
+          <h1>
+<a name="geany-code-format-plugin" class="anchor" href="#geany-code-format-plugin"><span class="octicon octicon-link"></span></a>Geany Code Format Plugin</h1>
+
+<p>The Code Format plugin allows simple and precise formatting of
+C, C++ and Objective-C source code using the excellent utility
+<code>clang-format</code> provided as part of the <code>ClangTools</code>.</p>
+
+<h2>
+<a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h2>
+
+<ul>
+<li>Accurate lexical code formatting using Clang frontend.</li>
+<li>Runs <code>clang-format</code> as an external process so you can swap out and
+upgrade versions at will without touching the plugin.</li>
+<li>Auto-formatting; never worry about formatting again, let the plugin
+do all the work!</li>
+<li>Can format current line, current selection, current document, or
+auto-format the entire document based on specified trigger characters.</li>
+</ul><h2>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<h3>
+<a name="ui-functionality" class="anchor" href="#ui-functionality"><span class="octicon octicon-link"></span></a>UI Functionality</h3>
+
+<p>Activate the plugin using Geany's Plugin Manager dialog. Once activated
+it will place a new <code>Code Format</code> item in the <code>Tools</code> menu inside the
+main menu. You can access basic functionality from here. The items and
+submenu's will automatically become enabled or disabled as certain
+features cannot be used (ex. trying to format with no open documents or
+documents with unsupported filetypes).</p>
+
+<h3>
+<a name="keybindings" class="anchor" href="#keybindings"><span class="octicon octicon-link"></span></a>Keybindings</h3>
+
+<p>There are two keybindings available, one to format the current
+selection (or current line if there is no selection), the other to
+format the entire document. You can set the keybindings through Geany's
+main Preferences dialog in the Keybindings tab.</p>
+
+<h3>
+<a name="preferences" class="anchor" href="#preferences"><span class="octicon octicon-link"></span></a>Preferences</h3>
+
+<p>The preferences are broken into two parts. The first is a regular
+<code>.conf</code> file containing your settings for the Code Format plugin
+itself, like where to find the <code>clang-format</code> utility, or whether
+auto-formatting is enabled. The second type of preferences are those
+sepcified in <code>YAML</code> files and are read by the <code>clang-format</code> utility
+to control how the code is formatted. This section discusses the former.</p>
+
+<p>The user preferences are stored in a file named <code>code-format.conf</code>
+found in under the Geany configuration directory inside the <code>plugins</code>
+directory. The project-specific settings are stored inside the
+actual Geany project file (usally ends with <code>.geany</code>).</p>
+
+<p>If a project is open, the project-specific preferences take effect and
+can be changed using the Project Preferences dialog accessible through
+Geany's <code>Project</code> menu. If no project is opened, then the user
+preferences are used and can be changed using the Plugin Preferences
+dialog accessible through Geany's <code>Edit</code> menu. If you change the
+user preferences while a project is open, the changes made won't take
+effect until there is no project open.</p>
+
+<p>In the configuration files, Code Format settings are stored in the
+<code>[code-format]</code> group.</p>
+
+<h4>
+<a name="clangformat-path" class="anchor" href="#clangformat-path"><span class="octicon octicon-link"></span></a>ClangFormat Path</h4>
+
+<p>This setting specifies the path to the <code>clang-format</code> utility that
+is part of ClangTools. If the executable is found in the <code>PATH</code>
+environment variable, you can just put <code>clang-format</code> otherwise,
+you can choose the full path to the binary. When a valid executable
+file is found, an "OK" icon will appear in the text box, otherwise
+an "error" icon will appear. It only means that the file is found
+and is executable, not that it's actually <code>clang-format</code>.</p>
+
+<p>In the configuration file, this setting is known as <code>clang-format-path</code>.</p>
+
+<h4>
+<a name="style" class="anchor" href="#style"><span class="octicon octicon-link"></span></a>Style</h4>
+
+<p>This setting controls whether to use one of the preset code formatting
+styles available from <code>clang-format</code> or whether to use a Custom
+<code>.clang-format</code> file to control the code formatting style. If you
+select one of the presets, you can click on the <code>Create</code> button to
+open a new YAML document in Geany containing the code formatting
+settings based on the selected item that you can tailor to suit
+your specific code formatting style.</p>
+
+<p>In the configuration file, this setting is known as <code>style</code> and can
+be (at present) one of <code>llvm</code>, <code>google</code>, <code>chromium</code>, <code>mozilla</code> or
+<code>custom</code>.</p>
+
+<h4>
+<a name="format-on-save" class="anchor" href="#format-on-save"><span class="octicon octicon-link"></span></a>Format on Save</h4>
+
+<p>This setting controls whether the active document will be formatted just
+before Geany saves it. This is especially useful if you don't like to
+enable the auto-formatting option but still want mostly-automatic
+formatting of the code.</p>
+
+<p>In the configuration file, this setting is known as <code>format-on-save</code>.</p>
+
+<h4>
+<a name="auto-format" class="anchor" href="#auto-format"><span class="octicon octicon-link"></span></a>Auto-Format</h4>
+
+<p>This setting controls whether the current document is formatted
+automatically when one of a specific set of trigger characters are
+typed. Even though it is not on by default, it is recommended that
+you use this feature, and only turn if off if you find it annoying
+or it gets too slow on large documents.</p>
+
+<p>In the configuration file, this setting is known as <code>auto-format</code>.</p>
+
+<h4>
+<a name="trigger-characters" class="anchor" href="#trigger-characters"><span class="octicon octicon-link"></span></a>Trigger Characters</h4>
+
+<p>When <code>auto-format</code> is enabled, this setting controls the characters
+which when typed will cause the document to be re-formatted. The
+default set "<code>)}];</code>" seems to work well but you might like to
+customize these a bit. You probably don't want to use "<code>\n</code>" (newline)
+or similar.</p>
+
+<p>In the configuration file, this setting is known as
+<code>auto-format-trigger-chars</code>.</p>
+
+<h2>
+<a name="clangformat-information" class="anchor" href="#clangformat-information"><span class="octicon octicon-link"></span></a>ClangFormat Information</h2>
+
+<p><a href="http://clang.llvm.org/docs/ClangFormat.html">ClangFormat</a> is part
+of the <a href="http://clang.llvm.org/docs/ClangTools.html">ClangTools</a> set
+of utilities. You must install the <code>clang-format</code> utility in order
+to use the Code Format plugin for Geany. You can configure which
+<code>clang-format</code> executable gets used in the Preferences (see above).
+It is <strong>HIGHLY</strong> recommended that you read the documentation for
+<code>clang-format</code> (at the above link) before using the Code Format
+plugin, in order to have any clue how it works.</p>
+
+<p>It's important to note that various features documented or available
+through the user interface may not actually be supported by your
+version of <code>clang-format</code>. It is recommended to always use the
+latest version although it seems to handle unknown options and
+such gracefully.</p>
+
+<h3>
+<a name="configuration" class="anchor" href="#configuration"><span class="octicon octicon-link"></span></a>Configuration</h3>
+
+<p>If you're using one of the preset code formatting styles (see
+Preferences), you basically don't have to configure anything for
+<code>clang-format</code>. The presets are equivalent to running:</p>
+
+<pre><code>$ clang-format -style=&lt;NAME_OF_STYLE&gt; ...
+</code></pre>
+
+<p>Where <code>&lt;NAME_OF_STYLE&gt;</code> is not equal to <code>file</code>.</p>
+
+<p>If you're using a custom <code>.clang-format</code> file, you should configure it
+as per ClangFormat's documentation. It's a YAML file with readable
+names and you should be able to figure it out while referencing the
+ClangFormat documentation (at the above link). The custom configuration
+is equivalent to running:</p>
+
+<pre><code>$ clang-format -style=file ...
+</code></pre>
+
+<p>The special name <code>file</code> tells <code>clang-format</code> to read <code>.clang-format</code>
+files instead of using a preset.</p>
+
+<p>To get started, you can base your custom configuration on one of the
+presets by using the "Create" button in the preferences dialog with
+the desired preset selected in the list (see Preferences). The "Create"
+button is equivalent to running:</p>
+
+<pre><code>$ clang-format -style=&lt;SELECTED_PRESET&gt; -dump-config
+</code></pre>
+
+<p>Where <code>&lt;SELECTED_PRESET&gt;</code> is the preset chosen in the Style list when
+the button is pressed. The output of the command is placed into a
+new unsaved document named <code>.clang-format</code>. You should then save it in
+a directory (see below) and customize it according to your needs.</p>
+
+<p>The <code>.clang-format</code> file should be saved at or above the document(s)
+you want formatting to work for. For example you can put it straight
+into the source directory or you can put it at the root of your
+project directory and it will affect all subdirectories (unless a
+certain subdirectory has a <code>.clang-format</code> file as well). Because
+of this functionality, it is required that a document has been saved
+on disk before so that the plugin can determine in which directory
+to start looking for <code>.clang-format</code> files. If you try and use the
+plugin on a new, never before saved document, the plugin simply
+won't function and it will print some message to Geany's standard
+output.</p>
+
+<h2>
+<a name="author-and-contact" class="anchor" href="#author-and-contact"><span class="octicon octicon-link"></span></a>Author and Contact</h2>
+
+<p>The Code Format plugin was written by and is maintained by
+Matthew Brush . You can report any issues
+on the Github Issues page (TODO link) or provide any improvement
+by making a Pull Request on Github.</p>
+        </section>
+
+        <footer>
+          Geany Code Format Plugin is maintained by <a href="https://github.com/codebrainz">codebrainz</a><br>
+          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="https://twitter.com/jasonlong">Jason Long</a>.
+        </footer>
+
+        
+      </div>
+    </div>
+  </body>
+</html>
