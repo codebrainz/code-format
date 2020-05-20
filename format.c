@@ -63,23 +63,11 @@ static size_t extract_cursor(GString *str)
 {
   char *first_nl, *first_line = NULL, *it;
   char num_buf[64] = { 0 };
-  const char *nl_chars;
   size_t first_len, cnt, cursor_pos;
 
-  nl_chars = "\r\n";
-  first_nl = strstr(str->str, "\r\n");
+  first_nl = strchr(str->str, '\n');
   if (!first_nl)
-  {
-    nl_chars = "\n";
-    first_nl = strchr(str->str, '\n');
-    if (!first_nl)
-    {
-      nl_chars = "\r";
-      first_nl = strchr(str->str, '\r');
-      if (!first_nl)
-        return INVALID_CURSOR;
-    }
-  }
+    return INVALID_CURSOR;
 
   first_len = first_nl - str->str;
   first_line = g_strndup(str->str, first_len);
@@ -87,7 +75,7 @@ static size_t extract_cursor(GString *str)
     return INVALID_CURSOR;
 
   // Remove the first line containing the cursor position
-  g_string_erase(str, 0, first_len + strlen(nl_chars));
+  g_string_erase(str, 0, first_len + 1);
 
   // Sample: { "Cursor": 4 }
   it = strstr(first_line, "\"Cursor\":");
