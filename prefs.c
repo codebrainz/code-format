@@ -353,12 +353,11 @@ static void validate_clang_path_entry(GtkEntry *ent)
   const char *path = gtk_entry_get_text(ent);
   if (fmt_check_clang_format(path))
   {
-    gtk_entry_set_icon_from_stock(ent, GTK_ENTRY_ICON_SECONDARY, GTK_STOCK_OK);
+    gtk_entry_set_icon_from_icon_name(ent, GTK_ENTRY_ICON_SECONDARY, "gtk-yes");
   }
   else
   {
-    gtk_entry_set_icon_from_stock(ent, GTK_ENTRY_ICON_SECONDARY,
-                                  GTK_STOCK_DIALOG_ERROR);
+    gtk_entry_set_icon_from_icon_name(ent, GTK_ENTRY_ICON_SECONDARY, "gtk-no");
   }
 }
 
@@ -439,7 +438,8 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   gtk_container_set_border_width(GTK_CONTAINER(grid), 12);
 
   lbl = gtk_label_new(_("ClangFormat Path:"));
-  gtk_misc_set_alignment(GTK_MISC(lbl), 0.0, 0.5);
+  gtk_label_set_xalign(GTK_LABEL(lbl), 0.0);
+  gtk_label_set_yalign(GTK_LABEL(lbl), 0.5);
 #if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), lbl, 0, row, 1, 1);
   gtk_widget_set_hexpand(lbl, false);
@@ -478,7 +478,8 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   row++;
 
   lbl = gtk_label_new(_("Style:"));
-  gtk_misc_set_alignment(GTK_MISC(lbl), 0.0, 0.5);
+  gtk_label_set_xalign(GTK_LABEL(lbl), 0.0);
+  gtk_label_set_yalign(GTK_LABEL(lbl), 0.5);
 #if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), lbl, 0, row, 1, 1);
   gtk_widget_set_hexpand(lbl, false);
@@ -579,7 +580,8 @@ GtkWidget *fmt_prefs_create_panel(bool project)
   lbl = gtk_label_new(_("Trigger Chars:"));
   gtk_widget_set_sensitive(lbl, p->auto_format);
   SET_WIDGET(chk, UI_TRIG_LBL, lbl);
-  gtk_misc_set_alignment(GTK_MISC(lbl), 0.0, 0.5);
+  gtk_label_set_xalign(GTK_LABEL(lbl), 0.0);
+  gtk_label_set_yalign(GTK_LABEL(lbl), 0.5);
 #if GTK_CHECK_VERSION(3, 0, 0)
   gtk_grid_attach(GTK_GRID(grid), lbl, 0, row, 1, 1);
   gtk_widget_set_hexpand(lbl, false);

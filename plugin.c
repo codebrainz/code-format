@@ -34,7 +34,6 @@
 
 GeanyPlugin *geany_plugin;
 GeanyData *geany_data;
-GeanyFunctions *geany_functions;
 
 PLUGIN_VERSION_CHECK(211)
 
@@ -96,8 +95,7 @@ static gboolean on_editor_notify(G_GNUC_UNUSED GObject *obj,
   {
     if (strchr(fmt_prefs_get_trigger(), notif->ch) != NULL)
       do_format(NULL, true, true); // FIXME: is it better to use region/line
-                                   // for
-                                   // auto-format?
+                                   // for auto-format?
   }
   return false;
 }
@@ -403,6 +401,6 @@ static void do_format_session(void)
   {
     GeanyDocument *doc = documents[i];
     if (fmt_is_supported_ft(doc))
-        do_format(doc, true, false);
+      do_format(doc, true, false);
   }
 }

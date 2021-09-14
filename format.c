@@ -28,8 +28,6 @@
 #include "prefs.h"
 #include "process.h"
 
-extern GeanyFunctions *geany_functions;
-
 static GPtrArray *format_arguments(size_t cursor, size_t offset, size_t length,
                                    bool xml_replacements)
 {
@@ -240,13 +238,13 @@ char *fmt_lookup_clang_format_dot_file(const char *start_at)
       (start_at[0] == '.' && start_at[1] == '\0'))
   {
     char *cur = g_get_current_dir();
-    dn = tm_get_real_path(cur);
+    dn = utils_get_real_path(cur);
     g_free(cur);
   }
   // Otherwise, if it's a file, get the dir name, if not use it
   else
   {
-    char *real_start = tm_get_real_path(start_at);
+    char *real_start = utils_get_real_path(start_at);
     if (g_file_test(start_at, G_FILE_TEST_IS_DIR))
       dn = real_start;
     else

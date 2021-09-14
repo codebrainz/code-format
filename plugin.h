@@ -25,9 +25,6 @@
 #include <glib.h>
 #include <gtk/gtk.h>
 
-#include <Scintilla.h>
-#include <ScintillaWidget.h>
-
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wignored-attributes"
@@ -49,7 +46,6 @@ G_BEGIN_DECLS
 
 extern GeanyPlugin *geany_plugin;
 extern GeanyData *geany_data;
-extern GeanyFunctions *geany_functions;
 
 G_END_DECLS
 
