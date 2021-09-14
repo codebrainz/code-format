@@ -58,7 +58,9 @@ static bool fmt_is_supported_ft(GeanyDocument *doc)
     return false;
   id = doc->file_type->id;
   return (id == GEANY_FILETYPES_C || id == GEANY_FILETYPES_CPP ||
-          id == GEANY_FILETYPES_OBJECTIVEC);
+          id == GEANY_FILETYPES_OBJECTIVEC ||
+          id == GEANY_FILETYPES_JAVA || id == GEANY_FILETYPES_JS ||
+          id == GEANY_FILETYPES_CS);
 }
 
 static void do_format(GeanyDocument *doc, bool entire_doc, bool autof);
